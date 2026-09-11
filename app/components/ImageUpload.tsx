@@ -7,7 +7,7 @@ export default function ImageUpload() {
   const [imageURL, setImageURL] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState();
   const [error, setError] = useState<string | null>(null);
-  const [response, setResponse] = useState(null);
+  const [response, setResponse] = useState<string | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -56,11 +56,13 @@ export default function ImageUpload() {
         body: formData,
       });
 
+      const data = await response.json();
+
+      setResponse(data.message);
+
       if (!response.ok) {
         setError("System unable to process the request");
       }
-      const data = await response.json();
-      setResponse(data.message);
     }
   };
 
@@ -86,7 +88,7 @@ export default function ImageUpload() {
           {error}
         </div>
 
-        {response && <p className="text-white text-lg">{response}</p>}
+        {response}
       </div>
 
       <div className="flex-1 border border-purple-500 relative">
