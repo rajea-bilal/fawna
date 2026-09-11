@@ -6,15 +6,36 @@ import { ReactEventHandler, useState } from "react";
 export default function ImageUpload() {
   const [imageURL, setImageURL] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState();
-  const [fileError, setFileError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
+    const max_size = 150000;
+    const types = ["image/png", "image/jpeg", "image/webp"];
     const file = e.target.files?.[0];
-    console.log(file);
+    console.log("file", file);
+    console.log("file size", file?.size);
+
+    if (!file) {
+      setError("Please select a file, my friend");
+      return;
+    }
 
     if (file) {
-      setFileError(false);
+      // if file exists, check size and type
+
+      if (file.size > max_size) {
+        setError("The file is too large, my friend");
+        return;
+      }
+
+      if (!types.includes(file.type)) {
+        setError("Please upload an accepted format; JPEG, PNG or WebP image");
+        return;
+      }
+
+      setError(null);
       const url = URL.createObjectURL(file as Blob);
       console.log(url);
       setImageURL(url);
@@ -23,6 +44,10 @@ export default function ImageUpload() {
   };
 
   const handleAnalyze = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!uploadedFile) {
+      setError("Please select a file first, my friend");
+      return;
+    }
     if (uploadedFile) {
       const formData = new FormData();
       formData.append("worksheet", uploadedFile);
@@ -30,10 +55,12 @@ export default function ImageUpload() {
         method: "POST",
         body: formData,
       });
+
+      if (!response.ok) {
+        setError("System unable to process the request");
+      }
       const data = await response.json();
       setResponse(data.message);
-    } else {
-      setFileError(true);
     }
   };
 
@@ -44,6 +71,7 @@ export default function ImageUpload() {
           <input
             className="bg-pink-500 p-2 w-full rounded-md text-black cursor-pointer"
             type="file"
+            accept="image/jpeg,image/png,image/webp"
             placeholder="upload file"
             onChange={handleFileUpload}
           />
@@ -55,9 +83,7 @@ export default function ImageUpload() {
           >
             Analyze
           </button>
-          {fileError && (
-            <span className="text-red text-sm">Please upload file first</span>
-          )}
+          {error}
         </div>
 
         {response && <p className="text-white text-lg">{response}</p>}
