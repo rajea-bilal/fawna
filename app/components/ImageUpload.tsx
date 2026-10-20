@@ -2,16 +2,17 @@
 
 import Image from "next/image";
 import { ReactEventHandler, useState } from "react";
+import shrinkImage from "@/lib/image/shrinkImage";
 
 export default function ImageUpload() {
   const [imageURL, setImageURL] = useState<string | null>(null);
-  const [uploadedFile, setUploadedFile] = useState();
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<string | null>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
-    const max_size = 150000;
+    const max_file_size = 10 * 1024 * 1024; // 10 MB
     const types = ["image/png", "image/jpeg", "image/webp"];
     const file = e.target.files?.[0];
     console.log("file", file);
@@ -25,21 +26,31 @@ export default function ImageUpload() {
     if (file) {
       // if file exists, check size and type
 
-      if (file.size > max_size) {
+      if (file.size > max_file_size) {
         setError("The file is too large, my friend");
         return;
       }
 
+      // if file is of accepted type
       if (!types.includes(file.type)) {
         setError("Please upload an accepted format; JPEG, PNG or WebP image");
         return;
       }
 
-      setError(null);
-      const url = URL.createObjectURL(file as Blob);
-      console.log(url);
-      setImageURL(url);
-      setUploadedFile(file);
+      // shrink the image
+      try {
+        const shrunkFile = await shrinkImage(file);
+        console.log("shrunkImage", shrunkFile);
+
+        setError(null);
+        const url = URL.createObjectURL(shrunkFile);
+        console.log(url);
+        setImageURL(url);
+        setUploadedFile(shrunkFile);
+      } catch (error) {
+        setError("Error shrinking image");
+        return;
+      }
     }
   };
 
@@ -75,7 +86,7 @@ export default function ImageUpload() {
             type="file"
             accept="image/jpeg,image/png,image/webp"
             placeholder="upload file"
-            onChange={handleFileUpload}
+            onChange={handleFileSelected}
           />
         </div>
         <div>
@@ -97,7 +108,7 @@ export default function ImageUpload() {
             src={imageURL}
             alt="Worksheet preview"
             fill
-            className="cover"
+            className="object-cover"
           />
         )}
       </div>
