@@ -1,5 +1,4 @@
-const MAX_LONG_SIDE = 1600; // pixels. Plenty for the AI to read worksheet text.
-const JPEG_QUALITY = 0.8; // 0 to 1. Smaller file vs sharper image.
+import { MAX_LONG_SIDE, JPEG_QUALITY } from "./imageSettings";
 
 export default async function shrinkImage(file: File): Promise<File> {
   // Decode the photo file into pixels, so the browser can redraw those pixels onto a smaller canvas to resize

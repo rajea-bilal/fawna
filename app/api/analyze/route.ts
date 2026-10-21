@@ -1,9 +1,10 @@
 import analyzeWorksheet from "@/lib/ai/analyzeWorksheet";
+import { processImageOnServer } from "@/lib/image/processImageOnServer";
 
 // extract the incoming file from formData
 // validate it
 // The backend reads the uploaded image’s bytes using file.arrayBuffer().
-// It then uses Node.js’s built-in Buffer class to access those bytes
+// uses Node.js’s built-in Buffer class to access those bytes
 // convert them into a base64 string. (33% bigger than original file)
 // a format suitable for AI consumption
 
@@ -47,9 +48,15 @@ export async function POST(request: Request) {
 
     // convert file to base64
     const arrayBuffer = await file.arrayBuffer(); // reads image's bytes
-    const base64 = Buffer.from(arrayBuffer).toString("base64"); // puts those bytes into a Nodejs buffer + converts the into a base64 string
+    const buffer = Buffer.from(arrayBuffer);
 
-    const imageDataUrl = `data:${file.type};base64,${base64}`; // prepare the image url string for openAI
+    console.log("buffer on server length", buffer.length);
+    const shrunkImage = await processImageOnServer(buffer);
+    console.log("shrunk imaage on server", shrunkImage.length);
+
+    const base64 = shrunkImage.toString("base64"); // puts those bytes into a Nodejs buffer + converts the into a base64 string
+
+    const imageDataUrl = `data:image/jpeg;base64,${base64}`; // prepare the image url string for openAI
 
     const ai_data = {
       imageDataUrl,

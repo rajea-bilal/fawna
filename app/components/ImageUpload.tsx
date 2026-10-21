@@ -108,7 +108,7 @@ export default function ImageUpload() {
             src={imageURL}
             alt="Worksheet preview"
             fill
-            className="object-cover"
+            className="object-contain"
           />
         )}
       </div>
