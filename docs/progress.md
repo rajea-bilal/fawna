@@ -46,6 +46,7 @@ The AI isn't switched on yet. The code to call it is written but turned off.
 
 - [ ] **Switch on the AI call** and send the result back to the page (next)
 - [ ] Check the AI can read the small print
+- [ ] Build a "golden set": 15–20 real mistakes with the right skill, to test the AI and compare models
 - [ ] Prove upright photos are handled (check the original photo's rotation note)
 - [ ] Make the size limit smaller (still 10 MB)
 - [ ] Update ADR-004 to say "browser **and** server"
@@ -59,3 +60,34 @@ The AI isn't switched on yet. The code to call it is written but turned off.
 - Parents log in
 - iPhone HEIC photos uploaded from a Mac are rejected. Decide what to do.
 - Automated tests
+
+## Plan for later: English worksheets
+
+Start this once the maths flow works well. It's a different process from maths:
+
+- Worksheet types: vocabulary, antonyms, synonyms.
+- Help the child understand what each word means.
+- Show example sentences.
+- Build muscle memory: the child writes the correct word in full in the blanks.
+
+## Plan for later: helping with mistakes (maths)
+
+After marking works well, each skill gap goes through these steps:
+
+1. **Result:** the parent sees the score, what went well, and a short "how to help" note.
+2. **Understand:** the child's answer next to the right one, step by step. Fact gaps skip this.
+3. **Check:** one quick question. If it's right, go to practice. If it's wrong, explain another way (2 tries at most, then suggest asking the teacher).
+4. **Practice:** questions of the same type first, then mixed with other skills.
+5. **Later:** bring the skill back a few days later (needs accounts).
+
+Each skill has a `kind` in `lib/ai/mathSkills.ts`, and the kind decides the help:
+- **fact** (7 × 5, 1 kg = 1000 g): recall practice
+- **method** (column addition): worked example
+- **idea** (¼ is smaller than ⅓): a picture first
+
+## Plan for later: PDF resources
+
+- Let the child or parent open a PDF (cheat sheet, practice sheet) for a skill gap.
+- Link each PDF by **skill `id`**. That's another reason ids must never change.
+- Only use PDFs we made or have permission to share.
+- Start with static files in the app.
