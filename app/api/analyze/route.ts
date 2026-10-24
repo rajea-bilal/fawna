@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     const ai_data = {
       imageDataUrl,
-      instructions: `hey Rajea, i love building things`,
+      schoolYear: 5,
     };
 
     const response = await analyzeWorksheet(ai_data);
