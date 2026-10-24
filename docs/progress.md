@@ -1,6 +1,6 @@
 # Fawna — Progress
 
-Last updated: 2026-10-21
+Last updated: 2026-10-24
 
 ## What Fawna does right now
 
@@ -9,9 +9,9 @@ Last updated: 2026-10-21
 3. The browser **shrinks** the photo and shows a preview of the whole page.
 4. The parent clicks **Analyze** and the photo is sent to our server.
 5. The server checks it again, **shrinks it again** with sharp (a safety net), and turns it into base64.
-6. The server replies "received", and the page shows that message.
-
-The AI isn't switched on yet. The code to call it is written but turned off.
+6. The server sends the photo and the school year (fixed at 5 for now) to OpenAI (`gpt-6.1-sol`).
+7. The AI marks every question: correct, incorrect, blank or unreadable. Wrong and blank answers get a skill from our list.
+8. The server counts the results and the page shows the score, e.g. "8 correct · 2 to work on".
 
 ## Done ✅
 
@@ -22,7 +22,11 @@ The AI isn't switched on yet. The code to call it is written but turned off.
 | Shrink the photo in the browser | `lib/image/shrinkImage.ts` | Yes, with a real iPhone photo |
 | Shrink the photo on the server (sharp) | `lib/image/processImageOnServer.ts` | Yes, with a real iPhone photo |
 | Shared settings (1600 px, quality 0.8) | `lib/image/imageSettings.ts` | — |
-| Turn the photo into base64 for the AI | `route.ts` | Runs, but the AI call is off |
+| Turn the photo into base64 for the AI | `route.ts` | Yes, end to end |
+| AI marks the worksheet (Responses API + Zod schema) | `lib/ai/analyzeWorksheet.ts`, `worksheetSchema.ts` | Yes, 1 real worksheet (`docs/golden-set.md`) |
+| Fixed skill list with kinds (116 skills) | `lib/ai/mathSkills.ts` | Not yet checked against many mistakes |
+| Code counts the results | `route.ts` | Yes, matched the AI's list |
+| Layered error handling (422, 502, 503, 504) | `route.ts` | 502 seen with a bad API key |
 | Preview shows the whole page (`object-contain`) | `ImageUpload.tsx` | Yes, by hand |
 | Decisions and test write-up | `docs/decisions.md`, `docs/process.md` | — |
 
@@ -31,6 +35,16 @@ The AI isn't switched on yet. The code to call it is written but turned off.
 - **Browser:** 4.2 MB → 260 KB (about 94% smaller)
 - **Server:** 259,798 → 259,252 bytes (barely changes, as expected)
 - **Hidden data removed on the server:** yes. The data sections were gone from the file.
+
+## First AI test (details in `docs/golden-set.md`)
+
+| Model | Marking | Skills |
+|---|---|---|
+| `gpt-5.6-luna` | 9/10 | 0/2 |
+| `gpt-6.1-sol` | **10/10** | 0/2 |
+
+- Sol marks well. Neither model names the skill gap the way we would: both pick the **topic**, not the **step that broke**.
+- Both models made the same kind of choice, so the fix is probably our instructions, not the model.
 
 ## What we learned
 
@@ -41,17 +55,25 @@ The AI isn't switched on yet. The code to call it is written but turned off.
 - **An `async` function always returns a Promise.** Use `await` to get the real value.
 - **Catch errors only where you can do something about them.**
 - **Check first, process after.** Don't do expensive work on a file you'll reject.
+- **Make impossible states impossible.** One `result` field with four shapes, not two true/false fields.
+- **Helpers throw, the route decides** what the user sees.
+- **`.env.local` wins over `.env`.** Secrets go in `.env.local` only.
+- **Change one thing at a time** when testing the AI, so you know what made the difference.
+- **A wrong answer is a clue.** If the digits stayed but moved, it's a place-value slip. If the digits changed, look for a fact or a misconception.
 
 ## Not done yet ⏳
 
-- [ ] **Switch on the AI call** and send the result back to the page (next)
-- [ ] Check the AI can read the small print
-- [ ] Build a "golden set": 15–20 real mistakes with the right skill, to test the AI and compare models
+- [x] **Switch on the AI call** and send the result back to the page
+- [x] Check the AI can read the small print (it read every question on entry 1)
+- [ ] **Better skill picks (next):** add `useWhen` hints to skills that overlap, plus a "read the digits of the wrong answer" rule in the instructions. Rerun Sol on entry 1 and log `response.usage` before and after.
+- [ ] Grow the golden set to 15–20 real mistakes (1 worksheet so far)
+- [ ] Show each question's result on the page, not just the score
+- [ ] Get the school year from the family account, not a fixed value
 - [ ] Prove upright photos are handled (check the original photo's rotation note)
 - [ ] Make the size limit smaller (still 10 MB)
-- [ ] Update ADR-004 to say "browser **and** server"
+- [x] Update ADR-004 to say "browser **and** server"
 - [ ] Finish the 415 error message (it just says "File type ")
-- [ ] Error codes: use 4xx for bad images and 5xx for server faults (the catch always sends 400)
+- [x] Error codes: 4xx for bad images, 5xx for server and AI faults (ADR-014)
 - [ ] Remove debug `console.log`s
 - [ ] Free old preview links with `URL.revokeObjectURL`
 
