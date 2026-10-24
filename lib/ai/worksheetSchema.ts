@@ -19,7 +19,7 @@ const baseFields = {
   question: z.string().describe("The question, copied exactly."),
   childAnswer: z
     .string()
-    .describe("What the child wrote, copied exactly. Do not fix it."),
+    .describe('What the child wrote, copied exactly. Do not fix it. Use "" if blank.'),
   correctAnswer: z
     .string()
     .describe("Solve the question yourself first, then write the right answer."),
@@ -39,6 +39,8 @@ const suggestedSkill = z.object({
   name: z.string().describe("A short name for the missing skill."),
 });
 
+const skill = z.discriminatedUnion("source", [listSkill, suggestedSkill]);
+
 // Shape 1: the child got it right. Nothing else is needed.
 const correctQuestion = z.object({
   ...baseFields,
@@ -49,9 +51,9 @@ const correctQuestion = z.object({
 const incorrectQuestion = z.object({
   ...baseFields,
   result: z.literal("incorrect"),
-  skill: z
-    .discriminatedUnion("source", [listSkill, suggestedSkill])
-    .describe('Use "suggested" only if no skill in the list fits.'),
+  skill: skill.describe(
+    'The skill for the step that went wrong. Use "suggested" only if no skill in the list fits.',
+  ),
 });
 
 // Shape 3: the AI can't read the question or the answer. It must not guess.
@@ -60,11 +62,23 @@ const unreadableQuestion = z.object({
   result: z.literal("unreadable"),
 });
 
-// Each question is one of the three shapes. `result` says which one.
+// Shape 4: the child left it empty (or crossed out every answer).
+// There's no wrong step to look at, so name the main skill the question tests.
+// That way it can still go into practice.
+const blankQuestion = z.object({
+  ...baseFields,
+  result: z.literal("blank"),
+  skill: skill.describe(
+    'The main skill this question tests. Use "suggested" only if no skill in the list fits.',
+  ),
+});
+
+// Each question is one of the four shapes. `result` says which one.
 const markedQuestion = z.discriminatedUnion("result", [
   correctQuestion,
   incorrectQuestion,
   unreadableQuestion,
+  blankQuestion,
 ]);
 
 // The full reply. OpenAI needs an object at the top, not a bare list.

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# golden set worksheet photos (children's work, keep private)
+golden-set-photos/

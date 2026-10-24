@@ -1,4 +1,6 @@
+import OpenAI from "openai";
 import analyzeWorksheet from "@/lib/ai/analyzeWorksheet";
+import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
 import { processImageOnServer } from "@/lib/image/processImageOnServer";
 
 // extract the incoming file from formData
@@ -27,58 +29,98 @@ export async function POST(request: Request) {
     );
   }
 
+  if (file.size > max_file_size) {
+    return Response.json(
+      {
+        message: "File size is too large, my friend",
+      },
+      { status: 413 },
+    );
+  }
+
+  if (!valid_types.includes(file.type)) {
+    return Response.json(
+      {
+        message: "File type ",
+      },
+      { status: 415 },
+    );
+  }
+
+  // convert file to base64
+  const arrayBuffer = await file.arrayBuffer(); // reads image's bytes
+  const buffer = Buffer.from(arrayBuffer);
+
+  console.log("buffer on server length", buffer.length);
+
+  // Layer 1: the image. Caught here, because we know exactly what went wrong.
+  // Declared before the try so we can use it after the braces.
+  let shrunkImage: Buffer;
   try {
-    if (file.size > max_file_size) {
-      return Response.json(
-        {
-          message: "File size is too large, my friend",
-        },
-        { status: 413 },
-      );
-    }
+    shrunkImage = await processImageOnServer(buffer);
+  } catch (error) {
+    console.error("sharp could not read the image:", error); // full details for us, in the server logs
+    return Response.json(
+      { message: "We couldn't open this photo. Please try another one." },
+      { status: 422 },
+    );
+  }
+  console.log("shrunk imaage on server", shrunkImage.length);
 
-    if (!valid_types.includes(file.type)) {
-      return Response.json(
-        {
-          message: "File type ",
-        },
-        { status: 415 },
-      );
-    }
+  const base64 = shrunkImage.toString("base64"); // puts those bytes into a Nodejs buffer + converts the into a base64 string
 
-    // convert file to base64
-    const arrayBuffer = await file.arrayBuffer(); // reads image's bytes
-    const buffer = Buffer.from(arrayBuffer);
+  const imageDataUrl = `data:image/jpeg;base64,${base64}`; // prepare the image url string for openAI
 
-    console.log("buffer on server length", buffer.length);
-    const shrunkImage = await processImageOnServer(buffer);
-    console.log("shrunk imaage on server", shrunkImage.length);
+  const ai_data = {
+    imageDataUrl,
+    schoolYear: 5,
+  };
 
-    const base64 = shrunkImage.toString("base64"); // puts those bytes into a Nodejs buffer + converts the into a base64 string
+  // Layer 2: the AI. The parent gets a simple message, never the real error.
+  try {
+    const result = await analyzeWorksheet(ai_data);
 
-    const imageDataUrl = `data:image/jpeg;base64,${base64}`; // prepare the image url string for openAI
+    console.log("response back from AI", result);
 
-    const ai_data = {
-      imageDataUrl,
-      schoolYear: 5,
-    };
-
-    const response = await analyzeWorksheet(ai_data);
-
-    console.log("response back from AI", response);
+    // Code counts, not the AI (ADR-007)
+    const count = (kind: MarkedQuestion["result"]) =>
+      result.questions.filter((question) => question.result === kind).length;
+    const correct = count("correct");
+    const incorrect = count("incorrect");
+    const blank = count("blank");
+    const unreadable = count("unreadable");
 
     return Response.json(
       {
-        message: "File successully received and validated",
+        message: `${correct} correct · ${incorrect} to work on · ${blank} not answered · ${unreadable} couldn't read`,
+        correct,
+        incorrect,
+        blank,
+        unreadable,
+        questions: result.questions,
       },
       { status: 200 },
     );
-  } catch (Error) {
+  } catch (error) {
+    console.error("AI marking failed:", error); // full details for us, in the server logs
+
+    // `error` is unknown, so check what it is before using it
+    if (error instanceof OpenAI.RateLimitError) {
+      return Response.json(
+        { message: "Fawna is busy right now. Please try again in a minute." },
+        { status: 503 },
+      );
+    }
+    if (error instanceof OpenAI.APIConnectionTimeoutError) {
+      return Response.json(
+        { message: "This took too long. Please try again." },
+        { status: 504 },
+      );
+    }
+    // Anything else (bad API key, empty AI reply, a bug) is our fault, not the parent's
     return Response.json(
-      {
-        message: "Malfuctioning in the system",
-      },
-      { status: 400 },
+      { message: "Something went wrong on our side. Please try again." },
+      { status: 502 },
     );
   }
 }
