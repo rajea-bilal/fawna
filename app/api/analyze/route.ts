@@ -80,7 +80,7 @@ export async function POST(request: Request) {
   try {
     const result = await analyzeWorksheet(ai_data);
 
-    console.log("response back from AI", result);
+    console.log("response back from AI", JSON.stringify(result, null, 2));
 
     // Code counts, not the AI (ADR-007)
     const count = (kind: MarkedQuestion["result"]) =>

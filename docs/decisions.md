@@ -329,3 +329,143 @@ A check question replaces the "Understood" button, because children (and adults)
 **Validation:** None yet.
 
 **Lesson:** Feeling you understand isn't the same as understanding.
+
+---
+
+# ADR-016: `useWhen` hints for skills that look alike
+
+- Date: 2026-10-24
+- Status: Implemented in the list (`lib/ai/mathSkills.ts`). Not sent to the AI yet.
+
+**Context:** On golden-set entry 1, Sol named 0 of 2 skills the way we would. It picked the topic (`fractions-to-decimals`, `fraction-decimal-percent`) instead of the step that broke. Some skills look alike, and the AI only sees their ids.
+
+**Options:** Rename skills so they never overlap · Remove the broad topic skills · Add a short hint to skills that overlap
+
+**Decision:** Add an optional `useWhen` hint, only to skills that overlap. It says when to pick that skill. Start with two:
+
+| Skill | Pick it when |
+|---|---|
+| `percentage-facts` | The digits are different from the right answer (25% → 0.4). The child doesn't know the fact. |
+| `dividing-by-10-100-1000` | The digits are the same, but the point is in the wrong place (0.66 for 0.066, 2.5 for 0.25). |
+| `fraction-means-division` (new, idea) | The child writes the fraction's own numbers after the point (3/4 → 0.34). Memorising 3/4 = 0.75 won't fix this: they'd still write 2/5 → 0.25. |
+
+`fraction-means-division` starts at Year 4, not Year 6 where the curriculum names it, because the mistake shows up as soon as children start decimals.
+
+**Why:** A wrong answer is a clue. Same digits in the wrong place means a ÷10/100/1000 slip. New digits mean a missing fact. The hint is optional, so the other skills don't change.
+
+**Trade-offs and risks:**
+
+- Hints do nothing until they're sent to the AI (next step).
+- Each hint adds text to every call, which costs a little more.
+- Two hints written for one worksheet could fit that worksheet too closely. More worksheets will test them.
+
+**Validation:** TypeScript passes. Not tested with the AI yet.
+
+**Lesson:** If two choices look alike, say how to tell them apart.
+
+---
+
+# ADR-017: Send the skill list (names, kinds, hints) in the instructions
+
+- Date: 2026-10-25
+- Status: Implemented (`lib/ai/analyzeWorksheet.ts`). Tested on 1 worksheet.
+
+**Context:** The AI only saw skill **ids**, through the schema (`z.enum(SKILL_IDS)`). Names, kinds and `useWhen` hints lived in `mathSkills.ts`, but nothing sent them. So the AI guessed what each id meant from its spelling. `fractions-to-decimals` looks like the topic of "3/250 as a decimal", so it picked that. This explains the 0/2 skill score on entry 1.
+
+The schema says **which answers are allowed**. It doesn't say **what they mean**.
+
+**Options:**
+
+| Option | Good | Bad |
+|---|---|---|
+| Keep ids only | Cheapest | The AI guesses meanings. This is how we got 0/2. |
+| Put the list in each skill's schema description | Next to the id | A schema enum can't describe each value well. Harder to read. |
+| Put the list in the **input**, next to the photo | Easy to change per child | Changes position on each call, so it's less likely to be cached |
+| Put the list in the **instructions** | Same text every call, so OpenAI caches it and charges less. Kept in one place. | Sent on every call (about 2,000 tokens) |
+
+**Decision:** Instructions. Code builds one line per skill from `MATH_CATEGORIES` (id, name, kind, hint if there is one) and adds it to `MARKING_INSTRUCTIONS`. The list is never written out by hand, so it can't drift from `mathSkills.ts`. We log `response.usage` to see the real token cost.
+
+**Why this matters for the product:** The skill list, kinds and hints are our own teaching decisions. A general chatbot doesn't have them. Sending them is what turns "an AI that marks" into Fawna.
+
+**Trade-offs and risks:**
+
+- More tokens per call. Caching should make most of them cheaper, but we haven't measured it yet.
+- A longer list could distract the AI. Later we can send only skills up to the child's year (`fromYear`).
+- If hints are badly written, the AI will follow them anyway. They need testing like code.
+
+**How I tested it:**
+
+I wanted to know two things: does the full list help the AI pick the right skill, and how much more does it cost?
+
+1. **Log the cost.** I added one line that prints `response.usage` after each AI call. It shows how many tokens went in, how many came out, and how many were cached (cheaper).
+2. **Test before the change.** I uploaded golden-set entry 1 (the fraction worksheet) with the old code, where the AI only sees skill ids.
+3. **Make the change.** Send the full skill list in the instructions.
+4. **Test after the change.** I uploaded the same worksheet again.
+5. **Compare.** Same photo, same model (`gpt-6.1-sol`), and only one thing changed. So any difference comes from the skill list.
+
+**Test 1: before (ids only)**
+
+![Token usage before the change](images/token_usage_test.png)
+
+| What | Result |
+|---|---|
+| Tokens in | 4,542 (4,539 cached) |
+| Tokens out | 925 |
+| Marking | 10/10 |
+| Q2 skill | `fractions-to-decimals` ❌ (we expect `dividing-by-10-100-1000`) |
+| Q8 skill | `fraction-decimal-percent` ❌ (we expect `percentage-facts`) |
+| **Skills** | **0/2** |
+| Time | 11.2 s |
+
+Almost everything was cached because I sent the **same photo** twice in a row. With a new photo, only the instructions and schema would be cached.
+
+**Test 2: after (full list with names, kinds and hints)**
+
+![Token usage after the change](images/token_usage_after_test.png)
+
+| What | Result |
+|---|---|
+| Tokens in | 6,567 (0 cached, 6,564 saved to cache) |
+| Tokens out | 928 |
+| Marking | All right, but 4a/4b and 5a/5b were joined into one row each |
+| Q2 skill | `dividing-by-10-100-1000` ✅ |
+| Q8 skill | `percentage-facts` ✅ |
+| **Skills** | **2/2** |
+| Time | About 12 s |
+
+Nothing was cached, because the instructions changed. OpenAI saved them, so the next call should be cheaper.
+
+**Before vs after**
+
+| | Before | After | Change |
+|---|---|---|---|
+| Tokens in | 4,542 | 6,567 | **+2,025 (about +45%)** |
+| Tokens out | 925 | 928 | Same |
+| Skills | 0/2 | **2/2** | Fixed |
+| Time | 11.2 s | ~12 s | About the same |
+
+**What this shows:** Telling the AI what each skill means fixed both skill picks. The cost is about 2,000 extra input tokens per call, and caching makes most of those cheaper after the first call. Writing the answer costs the same.
+
+**What it doesn't show yet:**
+
+- It's **one run on one worksheet**. The AI can answer differently each time, so 2/2 could be luck. Run it again, then test on more worksheets.
+- The hints were written for this worksheet, so they were bound to help here. New worksheets are the real test.
+- In test 2 the AI joined 4a/4b and 5a/5b into one row each. They were all correct, so the score didn't change. But if 4b had been wrong, it would have been hidden. This probably isn't caused by the skill list, since the AI changes how it splits questions between runs. Keep an eye on it.
+
+**Test 3: after, run again**
+
+To check that 2/2 wasn't luck, and that caching works, I ran the same worksheet once more.
+
+| What | Result |
+|---|---|
+| Tokens in | 6,567 (**6,564 cached**) |
+| Tokens out | 876 |
+| Skills | **2/2** again (same picks) |
+| Marking | 10/10, with 4 and 5 split into two rows each again |
+| Time | 11.6 s |
+
+Caching works: almost all of the extra tokens were cached this time. Note that the photo was the same too, so a new photo will cache less.
+
+**Validation:** 0/2 → 2/2 skills on golden-set entry 1, held over two runs. Not yet tested on a new worksheet.
+
+**Lesson:** An allowed list isn't the same as an explained list. If the AI has to choose, tell it what each choice means.

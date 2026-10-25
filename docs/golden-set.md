@@ -42,3 +42,6 @@ Each entry is a real worksheet that **we** marked by hand, including the right s
 |---|---|---|---|---|
 | 2026-10-24 | `gpt-5.6-luna` | 9/10 | 0/2 | Got its own Q8 order wrong, so marked Q8 correct. Q2 skill: `fractions-to-decimals`. |
 | 2026-10-24 | `gpt-6.1-sol` | **10/10** | 0/2 | Q2: `fractions-to-decimals`. Q8: `fraction-decimal-percent`. Both name the topic, not the step that broke. |
+| 2026-10-25 | `gpt-6.1-sol` | 10/10 | 0/2 | Before ADR-017 (ids only). Same picks as above. 4,542 tokens in. |
+| 2026-10-25 | `gpt-6.1-sol` | 10/10 | **2/2** | After ADR-017 (full skill list + hints). 6,567 tokens in. Joined 4a/4b and 5a/5b into one row each. |
+| 2026-10-25 | `gpt-6.1-sol` | 10/10 | **2/2** | Rerun of the above. 6,564 of 6,567 tokens cached. Split 4 and 5 into two rows again, but numbered both "4" (not 4a/4b). |

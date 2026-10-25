@@ -22,6 +22,8 @@ export interface MathSkill {
   name: string;
   kind: SkillKind;
   fromYear: number;
+  // Only for skills that overlap: tells the AI when to pick this one over a similar one.
+  useWhen?: string;
 }
 
 export interface MathCategory {
@@ -91,7 +93,14 @@ export const MATH_CATEGORIES: MathCategory[] = [
     skills: [
       { id: "division-facts", name: "Division facts (from times tables)", kind: "fact", fromYear: 2 },
       { id: "sharing-grouping", name: "Sharing and grouping", kind: "idea", fromYear: 1 },
-      { id: "dividing-by-10-100-1000", name: "Dividing by 10, 100, 1000", kind: "method", fromYear: 4 },
+      {
+        id: "dividing-by-10-100-1000",
+        name: "Dividing by 10, 100, 1000",
+        kind: "method",
+        fromYear: 4,
+        useWhen:
+          "Pick this when the child's digits are the same as the right answer, but the point is in the wrong place. Example: 0.66 instead of 0.066, or 2.5 instead of 0.25.",
+      },
       { id: "short-division", name: "Short division (bus stop)", kind: "method", fromYear: 5 },
       { id: "long-division", name: "Long division", kind: "method", fromYear: 6 },
       { id: "remainders", name: "Finding remainders", kind: "method", fromYear: 5 },
@@ -104,6 +113,14 @@ export const MATH_CATEGORIES: MathCategory[] = [
     skills: [
       { id: "naming-fractions", name: "Recognising and naming fractions", kind: "idea", fromYear: 1 },
       { id: "fraction-size", name: "Fraction size (bigger bottom number = smaller part)", kind: "idea", fromYear: 3 },
+      {
+        id: "fraction-means-division",
+        name: "A fraction means dividing (3/4 = 3 ÷ 4)",
+        kind: "idea",
+        fromYear: 4,
+        useWhen:
+          "Pick this when the child turns a fraction into a decimal by writing its own numbers after the point. Example: 3/4 written as 0.34, or 1/2 as 0.12.",
+      },
       { id: "fraction-of-amount", name: "Fraction of an amount", kind: "method", fromYear: 2 },
       { id: "equivalent-fractions", name: "Finding equivalent fractions", kind: "method", fromYear: 2 },
       { id: "comparing-fractions", name: "Comparing and ordering fractions", kind: "method", fromYear: 3 },
@@ -133,7 +150,14 @@ export const MATH_CATEGORIES: MathCategory[] = [
     name: "Percentages",
     skills: [
       { id: "percent-meaning", name: "What a percentage means (out of 100)", kind: "idea", fromYear: 5 },
-      { id: "percentage-facts", name: "Percentage facts (50% = ½, 25% = ¼, 10% = ⅒)", kind: "fact", fromYear: 5 },
+      {
+        id: "percentage-facts",
+        name: "Percentage facts (50% = ½, 25% = ¼, 10% = ⅒)",
+        kind: "fact",
+        fromYear: 5,
+        useWhen:
+          "Pick this when the child's digits are different from the right answer. Example: 25% written as 0.4. They don't know the fact.",
+      },
       { id: "fraction-decimal-percent", name: "Converting fractions, decimals and percentages", kind: "method", fromYear: 5 },
       { id: "percentage-of-amount", name: "Percentage of an amount", kind: "method", fromYear: 6 },
     ],

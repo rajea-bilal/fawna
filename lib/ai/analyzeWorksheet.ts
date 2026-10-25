@@ -1,9 +1,20 @@
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { WorksheetResult } from "./worksheetSchema";
+import { MATH_CATEGORIES } from "./mathSkills";
 
 // inputs: worksheet file, instructions to AI
 // output: response from AI to backend API endpoint /api/analyze
+
+// The skill list as text, built from mathSkills.ts so it can't drift from it.
+// One line per skill: id | name | kind, plus "Use when" if the skill has a hint.
+const SKILL_LIST = MATH_CATEGORIES.map((category) => {
+  const lines = category.skills.map((skill) => {
+    const hint = skill.useWhen ? ` | Use when: ${skill.useWhen}` : "";
+    return `- ${skill.id} | ${skill.name} | ${skill.kind}${hint}`;
+  });
+  return `${category.name}:\n${lines.join("\n")}`;
+}).join("\n\n");
 
 const MARKING_INSTRUCTIONS = `
 You mark UK primary school maths worksheets that a child has already done.
@@ -23,6 +34,11 @@ Rules:
   If every answer is crossed out, mark it "blank".
 - Accept answers that mean the same thing (0.5 and ½, £2.50 and 250p).
 - Mark every question on the sheet, in order.
+
+Skills to pick from (id | name | kind | when to use it).
+Pick by what the skill means, not by how its id sounds. If a skill has "Use when", follow it.
+
+${SKILL_LIST}
 `.trim();
 
 interface AnalyzeWorksheetParams {
@@ -63,6 +79,9 @@ export default async function analyzeWorksheet(
     ],
     text: { format: zodTextFormat(WorksheetResult, "worksheet_result") }, // openAI models response
   });
+
+  // Token counts for this call, so we can compare cost when the instructions change
+  console.log("[analyzeWorksheet] usage", JSON.stringify(response.usage));
 
   // Empty if the model refused or its reply was cut off
   if (!response.output_parsed) {
