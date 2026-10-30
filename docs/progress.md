@@ -1,17 +1,19 @@
 # Fawna — Progress
 
-Last updated: 2026-10-24
+Last updated: 2026-10-30
 
 ## What Fawna does right now
 
 1. A parent picks a photo of a worksheet.
 2. The browser checks it's a picture (PNG, JPEG or WebP) and not too big.
 3. The browser **shrinks** the photo and shows a preview of the whole page.
-4. The parent clicks **Analyze** and the photo is sent to our server.
+4. The parent types the demo code and clicks **Mark worksheet**. The photo is sent to our server, which checks the code first (ADR-022).
 5. The server checks it again, **shrinks it again** with sharp (a safety net), and turns it into base64.
 6. The server sends the photo and the school year (fixed at 5 for now) to OpenAI (`gpt-6.1-sol`).
 7. The AI marks every question: correct, incorrect, blank or unreadable. Wrong and blank answers get a skill from our list.
-8. The server counts the results and the page shows the score, e.g. "8 correct · 2 to work on".
+8. The server counts the results. The page shows the score, e.g. "8 correct · 2 to work on", and every question with its result and skill.
+
+Without a code, visitors can click **Try a sample worksheet** to see a saved result. No AI call.
 
 ## Done ✅
 
@@ -28,6 +30,12 @@ Last updated: 2026-10-24
 | Code counts the results | `route.ts` | Yes, matched the AI's list |
 | Layered error handling (422, 502, 503, 504) | `route.ts` | 502 seen with a bad API key |
 | Preview shows the whole page (`object-contain`) | `ImageUpload.tsx` | Yes, by hand |
+| Demo code lock, checked before the upload is read (ADR-022) | `route.ts` | Yes, 401 with no code and a wrong code |
+| Sample worksheet button (no AI call) | `lib/demo/sampleResult.ts` | Build only, not clicked yet |
+| Each question's result and skill on the page | `ResultsList.tsx` | Build only |
+| Shared counting for live and sample results | `lib/ai/summariseResult.ts` | Build only |
+| Logs show counts only, never a child's answers | `route.ts` | Yes |
+| Link previews for getfawna.com | `app/layout.tsx` | Yes, tags in the built page |
 | Decisions and test write-up | `docs/decisions.md`, `docs/process.md` | — |
 
 ## Shrinking test (details in `docs/process.md`)
@@ -67,19 +75,20 @@ Last updated: 2026-10-24
 - [x] Check the AI can read the small print (it read every question on entry 1)
 - [ ] **Better skill picks (next):** add `useWhen` hints to skills that overlap, plus a "read the digits of the wrong answer" rule in the instructions. Rerun Sol on entry 1 and log `response.usage` before and after.
 - [ ] Grow the golden set to 15–20 real mistakes (1 worksheet so far)
-- [ ] Show each question's result on the page, not just the score
+- [x] Show each question's result on the page, not just the score
 - [ ] Get the school year from the family account, not a fixed value
 - [ ] Prove upright photos are handled (check the original photo's rotation note)
 - [ ] Make the size limit smaller (still 10 MB)
 - [x] Update ADR-004 to say "browser **and** server"
-- [ ] Finish the 415 error message (it just says "File type ")
+- [x] Finish the 415 error message (it just says "File type ")
 - [x] Error codes: 4xx for bad images, 5xx for server and AI faults (ADR-014)
-- [ ] Remove debug `console.log`s
+- [ ] Remove debug `console.log`s (browser ones gone; the two image-size logs in `route.ts` are left)
 - [ ] Free old preview links with `URL.revokeObjectURL`
 
 ## Later
 
-- Parents log in
+- Parents log in (Supabase), replacing the demo code
+- Deploy to getfawna.com
 - iPhone HEIC photos uploaded from a Mac are rejected. Decide what to do.
 - Automated tests
 
@@ -91,6 +100,15 @@ Start this once the maths flow works well. It's a different process from maths:
 - Help the child understand what each word means.
 - Show example sentences.
 - Build muscle memory: the child writes the correct word in full in the blanks.
+
+## Plan for later: vocabulary flashcards
+
+Separate from marking. Here the sheet is a list of words to learn, not finished work:
+
+1. The parent uploads a vocabulary sheet.
+2. Fawna explains each word in context and shows how it's used in a sentence.
+3. Fawna turns the words into flashcards.
+4. The child practises them over time, and words they get wrong come back sooner (needs accounts).
 
 ## Plan for later: helping with mistakes (maths)
 

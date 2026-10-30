@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import analyzeWorksheet from "@/lib/ai/analyzeWorksheet";
-import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
+import { summariseResult } from "@/lib/ai/summariseResult";
 import { processImageOnServer } from "@/lib/image/processImageOnServer";
 
 // extract the incoming file from formData
@@ -10,7 +10,23 @@ import { processImageOnServer } from "@/lib/image/processImageOnServer";
 // convert them into a base64 string. (33% bigger than original file)
 // a format suitable for AI consumption
 
+// Seconds the host lets this route run. The AI call can take 60s, plus 1 retry.
+export const maxDuration = 150;
+
 export async function POST(request: Request) {
+  // Demo lock, until login exists. Checked first, before we read the upload,
+  // so a stranger costs us nothing. No code set on the server means no one gets in.
+  const demoCode = process.env.DEMO_ACCESS_CODE;
+  if (!demoCode) {
+    console.error("DEMO_ACCESS_CODE is not set, so live marking is locked");
+  }
+  if (!demoCode || request.headers.get("x-demo-code") !== demoCode) {
+    return Response.json(
+      { message: "That demo code isn't right. Try the sample instead." },
+      { status: 401 },
+    );
+  }
+
   const valid_types = ["image/png", "image/jpeg", "image/webp"];
   const max_file_size = 10 * 1024 * 1024; // 10 MB
   const formData = await request.formData();
@@ -41,7 +57,7 @@ export async function POST(request: Request) {
   if (!valid_types.includes(file.type)) {
     return Response.json(
       {
-        message: "File type ",
+        message: "Please upload a JPEG, PNG or WebP image.",
       },
       { status: 415 },
     );
@@ -80,27 +96,12 @@ export async function POST(request: Request) {
   try {
     const result = await analyzeWorksheet(ai_data);
 
-    console.log("response back from AI", JSON.stringify(result, null, 2));
+    const summary = summariseResult(result);
 
-    // Code counts, not the AI (ADR-007)
-    const count = (kind: MarkedQuestion["result"]) =>
-      result.questions.filter((question) => question.result === kind).length;
-    const correct = count("correct");
-    const incorrect = count("incorrect");
-    const blank = count("blank");
-    const unreadable = count("unreadable");
+    // Counts only. The questions hold a child's answers, so they stay out of the logs.
+    console.log("[analyze] marked", summary.message);
 
-    return Response.json(
-      {
-        message: `${correct} correct · ${incorrect} to work on · ${blank} not answered · ${unreadable} couldn't read`,
-        correct,
-        incorrect,
-        blank,
-        unreadable,
-        questions: result.questions,
-      },
-      { status: 200 },
-    );
+    return Response.json(summary, { status: 200 });
   } catch (error) {
     console.error("AI marking failed:", error); // full details for us, in the server logs
 

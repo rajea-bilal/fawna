@@ -31,10 +31,22 @@ const patrickHand = Patrick_Hand({
   weight: "400",
 });
 
+const description =
+  "Upload your child’s completed worksheet. Fawna helps you find where they need support and creates focused practice for their next step.";
+
 export const metadata: Metadata = {
+  // Lets link previews turn relative paths into full URLs on our domain.
+  metadataBase: new URL("https://getfawna.com"),
   title: "Fawna Learning",
-  description:
-    "Upload your child’s completed worksheet. Fawna helps you find where they need support and creates focused practice for their next step.",
+  description,
+  // What link previews show (LinkedIn, Slack, email).
+  openGraph: {
+    title: "Fawna Learning",
+    description,
+    url: "/",
+    siteName: "Fawna",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -578,3 +578,25 @@ Caching works: almost all of the extra tokens were cached this time. Note that t
 
 **Lesson:** Prototype in a throwaway page, then move the result across. Nine design rounds in React would have been slower.
 
+---
+
+# ADR-022: Demo code and sample result, before login
+
+- Date: 2026-10-30
+- Status: Implemented in `app/api/analyze/route.ts`, `app/components/ImageUpload.tsx` and `lib/demo/sampleResult.ts`.
+
+**Context:** Fawna needs a public URL today for a job application. `/api/analyze` has no login, so anyone could run up the OpenAI bill.
+
+**Options:** Build login now · Rate limit by IP · One shared demo code, plus a saved sample result
+
+**Decision:** The route checks an `x-demo-code` header against `DEMO_ACCESS_CODE` before it reads the upload. No code on the server means no one gets in. A "Try a sample worksheet" button shows a saved result with no AI call. The upload page asks visitors not to upload a child's name or face.
+
+**Why:** Login done in a rush is how holes happen. A shared code takes an hour, and the check sits where the login check will go later. The sample lets busy visitors see Fawna work in one click.
+
+**Trade-offs and risks:**
+
+- One code for everyone. If it leaks, change it in the host settings.
+- No limit per person. The OpenAI monthly cap is the safety net.
+- Replaced by Supabase login later.
+
+**Validation:** Lint and build pass. Production server returns 401 with no code and with a wrong code.
