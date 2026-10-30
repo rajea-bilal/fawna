@@ -56,7 +56,7 @@ const NEXT_STEPS = [
 // Dashed and button-free so it can't be mistaken for part of the marks.
 function NextSteps({ skill }: { skill: string }) {
   return (
-    <aside className="mt-6 rounded-2xl border-2 border-dashed border-ink/15 p-7 motion-safe:animate-rise motion-reduce:animate-fade sm:p-10">
+    <aside id="next-steps" className="mt-6 scroll-mt-6 rounded-2xl border-2 border-dashed border-ink/15 p-7 motion-safe:animate-rise motion-reduce:animate-fade sm:p-10">
       <p className="text-sm font-semibold tracking-wide text-rust uppercase">Coming soon</p>
       <h3 className="mt-2 font-display text-2xl font-medium">From mistake to practice</h3>
       <p className="mt-3 text-ink/80">
@@ -100,16 +100,27 @@ export default function ResultsList({ summary }: { summary: WorksheetSummary }) 
           <h2 className="font-display text-3xl font-medium">Marked</h2>
           {/* The full sentence for screen readers; the chips below show the same counts. */}
           <p className="sr-only">{summary.message}</p>
-          <ul aria-hidden className="mt-4 flex flex-wrap gap-2">
-            {counts.map((count) => (
-              <li
-                key={count.label}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-semibold tabular-nums ${count.tone}`}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ul aria-hidden className="contents">
+              {counts.map((count) => (
+                <li
+                  key={count.label}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold tabular-nums ${count.tone}`}
+                >
+                  {count.value} {count.label}
+                </li>
+              ))}
+            </ul>
+            {/* Outside the aria-hidden list, so screen readers can reach the link. */}
+            {firstSkill && (
+              <a
+                href="#next-steps"
+                className="rounded-full border-2 border-rust/30 px-3.5 py-1 text-sm font-semibold text-rust transition-colors hover:border-rust hover:bg-peach/40 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-espresso"
               >
-                {count.value} {count.label}
-              </li>
-            ))}
-          </ul>
+                How Fawna can help <span aria-hidden>↓</span>
+              </a>
+            )}
+          </div>
 
           <ol className="mt-8 divide-y divide-ink/10 border-t border-ink/10">
             {summary.questions.map((question, index) => {
