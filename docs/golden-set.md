@@ -38,6 +38,8 @@ Each entry is a real worksheet that **we** marked by hand, including the right s
 
 ### Runs
 
+Token logs for the 2026-10-25 runs: [before ADR-017](images/token_usage_test.png), [after ADR-017](images/token_usage_after_test.png).
+
 | Date | Model | Marking | Skills | Notes |
 |---|---|---|---|---|
 | 2026-10-24 | `gpt-5.6-luna` | 9/10 | 0/2 | Got its own Q8 order wrong, so marked Q8 correct. Q2 skill: `fractions-to-decimals`. |

@@ -31,11 +31,12 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 | Layered error handling (422, 502, 503, 504) | `route.ts` | 502 seen with a bad API key |
 | Preview shows the whole page (`object-contain`) | `ImageUpload.tsx` | Yes, by hand |
 | Demo code lock, checked before the upload is read (ADR-022) | `route.ts` | Yes, 401 with no code and a wrong code |
-| Sample worksheet button (no AI call) | `lib/demo/sampleResult.ts` | Build only, not clicked yet |
+| Sample worksheet button (no AI call) | `lib/demo/sampleResult.ts` | Yes, clicked in Chrome |
 | Each question's result and skill on the page | `ResultsList.tsx` | Build only |
 | Shared counting for live and sample results | `lib/ai/summariseResult.ts` | Build only |
 | Logs show counts only, never a child's answers | `route.ts` | Yes |
 | Link previews for getfawna.com | `app/layout.tsx` | Yes, tags in the built page |
+| Live on getfawna.com | — | Yes |
 | Decisions and test write-up | `docs/decisions.md`, `docs/process.md` | — |
 
 ## Shrinking test (details in `docs/process.md`)
@@ -51,8 +52,8 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 | `gpt-5.6-luna` | 9/10 | 0/2 |
 | `gpt-6.1-sol` | **10/10** | 0/2 |
 
-- Sol marks well. Neither model names the skill gap the way we would: both pick the **topic**, not the **step that broke**.
-- Both models made the same kind of choice, so the fix is probably our instructions, not the model.
+- Sol marks well. At first neither model named the skill gap the way we would: both picked the **topic**, not the **step that broke**.
+- Both made the same kind of choice, so the fix was our instructions, not the model. Sending the full skill list with hints got Sol to **2/2** (ADR-017).
 
 ## What we learned
 
@@ -73,7 +74,8 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 
 - [x] **Switch on the AI call** and send the result back to the page
 - [x] Check the AI can read the small print (it read every question on entry 1)
-- [ ] **Better skill picks (next):** add `useWhen` hints to skills that overlap, plus a "read the digits of the wrong answer" rule in the instructions. Rerun Sol on entry 1 and log `response.usage` before and after.
+- [x] Better skill picks: `useWhen` hints sent to the AI, Sol rerun on entry 1 with `response.usage` logged (0/2 → 2/2, ADR-017)
+- [ ] **Next:** add a "read the digits of the wrong answer" rule to the instructions, then test on a new worksheet
 - [ ] Grow the golden set to 15–20 real mistakes (1 worksheet so far)
 - [x] Show each question's result on the page, not just the score
 - [ ] Get the school year from the family account, not a fixed value
@@ -82,13 +84,12 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 - [x] Update ADR-004 to say "browser **and** server"
 - [x] Finish the 415 error message (it just says "File type ")
 - [x] Error codes: 4xx for bad images, 5xx for server and AI faults (ADR-014)
-- [ ] Remove debug `console.log`s (browser ones gone; the two image-size logs in `route.ts` are left)
+- [ ] Remove debug `console.log`s (browser ones gone; `route.ts` still has the two image-size logs)
 - [ ] Free old preview links with `URL.revokeObjectURL`
 
 ## Later
 
 - Parents log in (Supabase), replacing the demo code
-- Deploy to getfawna.com
 - iPhone HEIC photos uploaded from a Mac are rejected. Decide what to do.
 - Automated tests
 

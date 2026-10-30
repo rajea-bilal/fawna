@@ -25,7 +25,8 @@ I used a real iPhone photo of a worksheet (`IMG_9036.jpg`).
 
 ![Server barely changes it](images/server_barely_shrunk.png)
 
+The AI could still read the small print: it read every question on golden-set entry 1.
+
 ## Not tested yet
 
-- Whether the AI can read the small print (the AI isn't switched on yet)
 - A photo sent straight to the server without going through the browser

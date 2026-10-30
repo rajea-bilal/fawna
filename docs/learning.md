@@ -1,32 +1,28 @@
-## Zod
-
-- Zod is a library that checks whether data follows the rules you have written.
-
-- Can check actual data while your app runs.
-
-- Helps catch unexpected data from forms, APIs or AI replies.
+# What I've Learned
 
 ## TypeScript
 
-- Checks types while you write and build your code.
+- Checks types while I write and build the code.
+- Catches mistakes in my code.
+- Its types are removed when the code becomes JavaScript, so they don't exist while the app runs.
 
-- Helps catch mistakes in your code.
+## Zod
 
-- It's type annotations are removed when converted to JavaScript.
+- A library that checks data against rules I write.
+- It runs while the app runs, so it can check real data.
+- Catches bad data from forms, APIs or AI replies.
 
-## Why do we need Zod + TypeScript in conjunction in our app
+## Why use both
 
-- Because an API response arrives **while** your app is running. Giving it a TypeScript type does not automatically check what the API actually sent. That is where Zod helps.
+An API reply arrives while the app is running. Giving it a TypeScript type doesn't check what was actually sent. Zod does.
 
-- TypeScript checks your code. Zod checks the data your app receives.
+TypeScript checks my code. Zod checks the data my app receives.
 
 ## Schema
 
-- Schema is a description of the data you expect, **including** the rules it must follow.
+A schema describes the data I expect: its shape and the rules it must follow.
 
-- shape of data + rules it must follow
-
-```bash
+```ts
 const MarkedQuestion = z.object({
   question: z.string(),
   childAnswer: z.string(),
@@ -34,17 +30,17 @@ const MarkedQuestion = z.object({
 });
 ```
 
-- an **enum** specifies a fixed list of allowed values
+An **enum** is a fixed list of allowed values.
 
-- once we have defined the schema, Zod can give TypeScript he matching type
+Once the schema exists, Zod can give TypeScript the matching type:
 
-```bash
+```ts
 type MarkedQuestionType = z.infer<typeof MarkedQuestion>;
 ```
 
-- the resulting type is equivalent to
+This is the same as writing:
 
-```bash
+```ts
 type MarkedQuestionType = {
   question: string;
   childAnswer: string;
@@ -52,19 +48,19 @@ type MarkedQuestionType = {
 };
 ```
 
-What OpenAI receives on every call, in this order:
+## How OpenAI's prompt cache works
 
-1. Instructions + skill list ← the same every time
-2. Schema (the reply shape) ← the same every time
-3. "The child is in Year 5." ← the same for now
-4. The photo ← different for each worksheet
-   How the cache works:
-   OpenAI compares your new request with one it saw recently, from the start. It counts how far the two match. It stops at the first difference.
+Every call sends these, in this order:
 
-The matching part is cached, so OpenAI doesn't redo that work and charges you less. Everything after the first difference is charged at the normal price.
+1. Instructions + skill list (the same every time)
+2. Schema, the shape of the reply (the same every time)
+3. "The child is in Year 5." (the same for now)
+4. The photo (different for each worksheet)
+
+OpenAI compares my new request with recent ones, from the start, and stops at the first difference. The matching part is cached: OpenAI doesn't redo that work and charges less for it. Everything after the first difference costs the normal price.
 
 Three things to know:
 
-Order matters. The parts that stay the same go first, and the photo goes last. Your code already does this. If the photo came first, nothing would ever match.
-Cached isn't free. It's cheaper, but you still pay something.
-The cache doesn't last forever. It only lasts a short while. If no one uses Fawna for a while, the next call starts again at 0 cached.
+- **Order matters.** The parts that stay the same go first, and the photo goes last. My code already does this. If the photo came first, nothing would ever match.
+- **Cached isn't free.** It's cheaper, but I still pay something.
+- **The cache doesn't last long.** If no one uses Fawna for a while, the next call starts again with nothing cached.

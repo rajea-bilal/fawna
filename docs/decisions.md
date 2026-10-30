@@ -55,7 +55,7 @@ Status: **Proposed** (agreed, not built) · **Accepted** (being built) · **Impl
 
 **Risks:** Small text could become unreadable.
 
-**Validation:** A real iPhone photo went from 4.2 MB to 260 KB and stayed upright (`docs/process.md`). Not yet checked: whether the AI can read the small print.
+**Validation:** A real iPhone photo went from 4.2 MB to 260 KB and stayed upright (`docs/process.md`). The AI still read every question on golden-set entry 1.
 
 **Lesson:** Pixel size matters to the AI more than file size.
 
@@ -124,7 +124,7 @@ Status: **Proposed** (agreed, not built) · **Accepted** (being built) · **Impl
 # ADR-007: The AI marks the answers, and code counts them
 
 - Date: 2026-10-22
-- Status: Implemented (not yet tested with a real worksheet)
+- Status: Implemented (10/10 on 1 real worksheet, `docs/golden-set.md`)
 
 **Context:** Code can check `36 + 47`, but not word problems, graphs or shapes.
 
@@ -182,7 +182,7 @@ Status: **Proposed** (agreed, not built) · **Accepted** (being built) · **Impl
 # ADR-010: How we call OpenAI
 
 - Date: 2026-10-22
-- Status: Implemented (not yet run)
+- Status: Implemented
 
 **Decision:**
 
@@ -205,7 +205,7 @@ Status: **Proposed** (agreed, not built) · **Accepted** (being built) · **Impl
 
 **Decision:** Mark a real worksheet by hand. Run it through Luna and Sol. Pick the cheapest one that marks everything correctly.
 
-**Validation:** Golden-set entry 1 (`docs/golden-set.md`): Luna marked 9/10 (it got its own answer to Q8 wrong). Sol marked 10/10. Both named 0 of 2 skills the way we would. Only one worksheet so far. Cost is still estimated, not measured: about $0.001 (Luna) to $0.02 (Sol) per worksheet.
+**Validation:** Golden-set entry 1 (`docs/golden-set.md`): Luna marked 9/10 (it got its own answer to Q8 wrong). Sol marked 10/10. Both named 0 of 2 skills the way we would (ADR-017 later got Sol to 2/2). Only one worksheet so far. Cost is still estimated, not measured: about $0.001 (Luna) to $0.02 (Sol) per worksheet.
 
 **Revisit when:** the instructions improve. Then try Luna again, since it's about 20× cheaper.
 
@@ -240,7 +240,7 @@ A skill is either **from the list** (`skillId`) or **suggested** (category and a
 - The schema makes sure the skill is **from the list**, not that it's the **right** one.
 - We don't know why a question was left blank (didn't know how, or ran out of time).
 
-**Validation:** Tested locally with Zod: a good reply passes. These are rejected: "incorrect" with no skill, a made-up skill id, and "blank" with no skill. OpenAI accepts the format (strict mode). Not yet tested with a real AI call.
+**Validation:** Tested locally with Zod: a good reply passes. These are rejected: "incorrect" with no skill, a made-up skill id, and "blank" with no skill. OpenAI accepts the format (strict mode). Real AI replies on golden-set entry 1 passed the schema.
 
 **Lesson:** Make impossible states impossible.
 
@@ -268,7 +268,7 @@ Test: *"Could a child get this right just by remembering one thing?"* Yes means 
 - Some kinds are judgement calls (BIDMAS = fact, telling the time = method). They need review.
 - The AI may still pick the topic instead of the step that broke.
 
-**Validation:** 116 skills, each with one kind, no duplicate ids. Not tested with the AI. Plan: a "golden set" of 15–20 real mistakes with the right skill.
+**Validation:** 116 skills, each with one kind, no duplicate ids. Golden set started with 1 worksheet (`docs/golden-set.md`). Goal: 15–20 real mistakes.
 
 **Lesson:** Put decisions in data you control, not in the AI's judgement.
 
@@ -335,7 +335,7 @@ A check question replaces the "Understood" button, because children (and adults)
 # ADR-016: `useWhen` hints for skills that look alike
 
 - Date: 2026-10-24
-- Status: Implemented in the list (`lib/ai/mathSkills.ts`). Not sent to the AI yet.
+- Status: Implemented in `lib/ai/mathSkills.ts`, and sent to the AI since ADR-017.
 
 **Context:** On golden-set entry 1, Sol named 0 of 2 skills the way we would. It picked the topic (`fractions-to-decimals`, `fraction-decimal-percent`) instead of the step that broke. Some skills look alike, and the AI only sees their ids.
 
@@ -355,11 +355,10 @@ A check question replaces the "Understood" button, because children (and adults)
 
 **Trade-offs and risks:**
 
-- Hints do nothing until they're sent to the AI (next step).
 - Each hint adds text to every call, which costs a little more.
 - Two hints written for one worksheet could fit that worksheet too closely. More worksheets will test them.
 
-**Validation:** TypeScript passes. Not tested with the AI yet.
+**Validation:** TypeScript passes. With the hints sent (ADR-017), Sol picked both skills right on golden-set entry 1.
 
 **Lesson:** If two choices look alike, say how to tell them apart.
 
@@ -389,82 +388,39 @@ The schema says **which answers are allowed**. It doesn't say **what they mean**
 
 **Trade-offs and risks:**
 
-- More tokens per call. Caching should make most of them cheaper, but we haven't measured it yet.
+- More tokens per call. Caching makes most of them cheaper after the first call.
 - A longer list could distract the AI. Later we can send only skills up to the child's year (`fromYear`).
 - If hints are badly written, the AI will follow them anyway. They need testing like code.
 
-**How I tested it:**
+**How I tested it:** I wanted to know two things: does the full list help the AI pick the right skill, and how much more does it cost?
 
-I wanted to know two things: does the full list help the AI pick the right skill, and how much more does it cost?
-
-1. **Log the cost.** I added one line that prints `response.usage` after each AI call. It shows how many tokens went in, how many came out, and how many were cached (cheaper).
-2. **Test before the change.** I uploaded golden-set entry 1 (the fraction worksheet) with the old code, where the AI only sees skill ids.
-3. **Make the change.** Send the full skill list in the instructions.
-4. **Test after the change.** I uploaded the same worksheet again.
-5. **Compare.** Same photo, same model (`gpt-6.1-sol`), and only one thing changed. So any difference comes from the skill list.
-
-**Test 1: before (ids only)**
+I added one line that logs `response.usage` after each call (tokens in, out and cached). Then I ran golden-set entry 1 through `gpt-6.1-sol` before and after the change. Same photo, same model, one change, so any difference comes from the skill list.
 
 ![Token usage before the change](images/token_usage_test.png)
 
-| What | Result |
-|---|---|
-| Tokens in | 4,542 (4,539 cached) |
-| Tokens out | 925 |
-| Marking | 10/10 |
-| Q2 skill | `fractions-to-decimals` ❌ (we expect `dividing-by-10-100-1000`) |
-| Q8 skill | `fraction-decimal-percent` ❌ (we expect `percentage-facts`) |
-| **Skills** | **0/2** |
-| Time | 11.2 s |
-
-Almost everything was cached because I sent the **same photo** twice in a row. With a new photo, only the instructions and schema would be cached.
-
-**Test 2: after (full list with names, kinds and hints)**
-
 ![Token usage after the change](images/token_usage_after_test.png)
 
-| What | Result |
-|---|---|
-| Tokens in | 6,567 (0 cached, 6,564 saved to cache) |
-| Tokens out | 928 |
-| Marking | All right, but 4a/4b and 5a/5b were joined into one row each |
-| Q2 skill | `dividing-by-10-100-1000` ✅ |
-| Q8 skill | `percentage-facts` ✅ |
-| **Skills** | **2/2** |
-| Time | About 12 s |
-
-Nothing was cached, because the instructions changed. OpenAI saved them, so the next call should be cheaper.
-
-**Before vs after**
-
-| | Before | After | Change |
+| | Before (ids only) | After | After, run again |
 |---|---|---|---|
-| Tokens in | 4,542 | 6,567 | **+2,025 (about +45%)** |
-| Tokens out | 925 | 928 | Same |
-| Skills | 0/2 | **2/2** | Fixed |
-| Time | 11.2 s | ~12 s | About the same |
+| Tokens in | 4,542 (4,539 cached) | 6,567 (0 cached) | 6,567 (6,564 cached) |
+| Tokens out | 925 | 928 | 876 |
+| Marking | 10/10 | 10/10, but 4a/4b and 5a/5b joined into one row each | 10/10 |
+| Q2 skill | `fractions-to-decimals` ❌ | `dividing-by-10-100-1000` ✅ | same ✅ |
+| Q8 skill | `fraction-decimal-percent` ❌ | `percentage-facts` ✅ | same ✅ |
+| **Skills** | **0/2** | **2/2** | **2/2** |
+| Time | 11.2 s | ~12 s | 11.6 s |
 
-**What this shows:** Telling the AI what each skill means fixed both skill picks. The cost is about 2,000 extra input tokens per call, and caching makes most of those cheaper after the first call. Writing the answer costs the same.
+**What this shows:**
+
+- Telling the AI what each skill means fixed both picks, and it held on a second run.
+- The list costs about 2,000 extra tokens in (+45%). Tokens out stay the same.
+- Caching works. The first "after" run had 0 cached because the instructions changed. The next run had almost all of it cached.
 
 **What it doesn't show yet:**
 
-- It's **one run on one worksheet**. The AI can answer differently each time, so 2/2 could be luck. Run it again, then test on more worksheets.
-- The hints were written for this worksheet, so they were bound to help here. New worksheets are the real test.
-- In test 2 the AI joined 4a/4b and 5a/5b into one row each. They were all correct, so the score didn't change. But if 4b had been wrong, it would have been hidden. This probably isn't caused by the skill list, since the AI changes how it splits questions between runs. Keep an eye on it.
-
-**Test 3: after, run again**
-
-To check that 2/2 wasn't luck, and that caching works, I ran the same worksheet once more.
-
-| What | Result |
-|---|---|
-| Tokens in | 6,567 (**6,564 cached**) |
-| Tokens out | 876 |
-| Skills | **2/2** again (same picks) |
-| Marking | 10/10, with 4 and 5 split into two rows each again |
-| Time | 11.6 s |
-
-Caching works: almost all of the extra tokens were cached this time. Note that the photo was the same too, so a new photo will cache less.
+- I sent the same photo every time, so caching looks better than it will be. With a new photo, only the instructions and schema get cached.
+- It's one worksheet, and the hints were written for it. New worksheets are the real test.
+- The AI sometimes joins 4a/4b into one row. Here both were right, but a wrong 4b would be hidden. It's probably not the skill list, since it changes between runs. Keep an eye on it.
 
 **Validation:** 0/2 → 2/2 skills on golden-set entry 1, held over two runs. Not yet tested on a new worksheet.
 
@@ -472,35 +428,35 @@ Caching works: almost all of the extra tokens were cached this time. Note that t
 
 ---
 
-# ADR-018: Hero palette from the painting, not from a brand green
+# ADR-018: Hero colours come from the painting, not a brand green
 
 - Date: 2026-10-27
 - Status: Implemented on the landing page.
 
-**Context:** The first hero put a dark green overlay over the kitchen illustration, with ivory text and ivory buttons, and left a white band below. It looked like a photo with a banner on top. The illustration is warm throughout (plaster wall, terracotta floor, walnut table, amber lamp, plum sky), and the artist left the left third as an empty wall.
+**Context:** The first hero had a dark green layer over the kitchen picture, ivory text and ivory buttons, and a white band below. It looked like a banner stuck on a photo. The picture is warm all over (plaster wall, terracotta floor, walnut table, amber lamp, plum sky), and the left third is an empty wall.
 
-**Options:** Keep green and tune it · No overlay, dark text on the bare wall · A dusk-plum overlay · An espresso overlay (the table's shadow)
+**Options:** Keep green and tune it · No layer, dark text on the bare wall · A dusk-plum layer · An espresso layer (the table's shadow)
 
-**Decision:** Espresso overlay, cream text, one cream button with espresso text. Every colour is sampled from the picture. The hero fills the first screen. Headings move from Oswald to Fraunces, a soft variable serif. On phones the copy drops to the bottom over a rising shadow so the family stays in view.
+**Decision:** An espresso layer, cream text, and one cream button with espresso text. Every colour is taken from the picture. The hero fills the first screen. Headings change from Oswald to Fraunces, a soft serif. On phones the text moves to the bottom over a shadow, so the family stays in view.
 
 | Token | Value | Used for |
 |---|---|---|
-| `cream` | `#f5e7d2` | hero text, primary button |
-| `linen` | `#fbf3e6` | button hover, section grounds |
-| `espresso` | `#26160e` | overlay, button text and shadow |
+| `cream` | `#f5e7d2` | hero text, main button |
+| `linen` | `#fbf3e6` | button hover, section backgrounds |
+| `espresso` | `#26160e` | dark layer, button text and shadow |
 | `ink` | `#33211a` | body text on light pages |
 
-**Why:** Green is the opposite temperature to the painting, so it reads as laid on top. Brown is already in the scene, so the overlay reads as evening light. One bright button means the eye lands on the family first.
+**Why:** Green is cool and the picture is warm, so the green looked stuck on top. Brown is already in the scene, so the layer looks like evening light. With only one bright button, you see the family first.
 
 **Trade-offs and risks:**
 
-- The dialog in `ExamplePreview` still uses the old `ivory` and `forest` tokens. They stay in `globals.css` until it is restyled.
-- Cream on the veiled wall is strong at headline size. Body copy must stay short.
-- Lamp amber (`#e9a43f`) and terracotta were considered for an accent word in the headline and rejected. Cream alone is quieter and more storybook.
+- The dialog in `ExamplePreview` still uses the old `ivory` and `forest` colours. They stay in `globals.css` until I restyle it.
+- Cream text on the wall works for big headings. Body text must stay short.
+- I tried lamp amber (`#e9a43f`) and terracotta for one word in the headline. Cream alone was calmer.
 
-**Validation:** TypeScript and lint pass. Checked in the browser at desktop and phone widths.
+**Validation:** TypeScript and lint pass. Checked in the browser on desktop and phone.
 
-**Lesson:** When a page has a strong picture, take the palette from the picture. The brand colour can follow.
+**Lesson:** When a page has a strong picture, take the colours from it. The brand colour can follow.
 
 ---
 
@@ -509,23 +465,23 @@ Caching works: almost all of the extra tokens were cached this time. Note that t
 - Date: 2026-10-28
 - Status: Implemented in `app/components/landing/blockLetters/`.
 
-**Context:** The section after the hero shows PRACTICE as 3D block lettering that rocks gently, in the style of Relume's PUBLISH. The letters must be real geometry, not image frames.
+**Context:** After the hero, the word PRACTICE shows as 3D block letters that rock gently, like Relume's PUBLISH. The letters must be real 3D shapes, not image frames.
 
-**Options:** CSS 3D transforms (no dependency, about 350 face elements) · Plain Three.js (one scene, two draw calls) · React Three Fiber (adds a React reconciler on top of Three)
+**Options:** CSS 3D (no library, but about 350 elements) · Plain Three.js (one scene, two draw calls) · React Three Fiber (adds a React layer on top of Three)
 
-**Decision:** Plain Three.js, loaded with `next/dynamic` only when the section is near the viewport. One cube per filled grid cell, all merged into one mesh with per-vertex colours and one line set for outlines. Orthographic camera, transparent canvas, rotation ±20° over 11 s. A server-rendered SVG of the flat word shows first and stays for reduced motion or missing WebGL.
+**Decision:** Plain Three.js. It only loads (with `next/dynamic`) when the section is close to the screen. Each filled grid square is a cube. All cubes are merged into one mesh, with one set of outlines. Flat (orthographic) camera, see-through canvas, turning ±20° over 11 s. A flat SVG of the word shows first. It stays for users who prefer reduced motion or don't have WebGL.
 
-**Why:** The spec asked for an orthographic camera and a WebGL fallback, which points at WebGL. One scene does not need a reconciler. Merging the cubes keeps the frame cost flat however long the word gets.
+**Why:** The design needed a flat camera and a WebGL fallback, so WebGL it is. One scene doesn't need React Three Fiber. Merging the cubes means a longer word doesn't make it slower.
 
 **Trade-offs and risks:**
 
-- Three.js adds roughly 150 KB gzipped to the client, but only on this page and only after the section is near.
-- WebGL draws its own lines one device pixel wide, so outlines use the fat-line addon (`LineSegments2`), which needs the canvas size on every resize.
-- Reduced motion and no-WebGL paths are covered by code and types but were not exercised in a browser.
+- Three.js adds about 150 KB (gzipped), but only on this page and only once the section is near.
+- WebGL lines are only 1 device pixel wide, so outlines use the fat-line addon (`LineSegments2`). It needs the canvas size on every resize.
+- The reduced-motion and no-WebGL paths are in the code, but I haven't tried them in a browser.
 
-**Validation:** TypeScript and lint pass. In Chrome: spelling correct, outlines present, page background shows through, 60 fps, SVG removed after the first WebGL frame, 121 cells server-rendered, no Three.js in the initial HTML. Checked at 390, 700 and 1393 px wide.
+**Validation:** TypeScript and lint pass. In Chrome: spelling right, outlines show, page background shows through, 60 fps, SVG removed after the first WebGL frame, 121 cells rendered on the server, no Three.js in the first HTML. Checked at 390, 700 and 1393 px wide.
 
-**Lesson:** Build geometry once, merge it, and let the GPU draw it in one go. Per-object meshes are the slow default.
+**Lesson:** Build the shapes once, merge them, and let the GPU draw them in one go. One mesh per cube is the slow default.
 
 ---
 
@@ -534,49 +490,49 @@ Caching works: almost all of the extra tokens were cached this time. Note that t
 - Date: 2026-10-28
 - Status: Implemented.
 
-**Context:** The block letters shipped in Relume's yellows on a white ground. White is the one colour not in the hero painting, so the section read as a different site. The cubes also looked thin when turned, and the outlines were hairlines on retina screens.
+**Context:** The letters first used Relume's yellows on white. White isn't in the hero picture, so the section looked like a different site. The cubes also looked thin when turned, and the outlines were too thin on retina screens.
 
 **Options:** Lamp amber on linen · Cream on espresso · Terracotta on linen
 
-**Decision:** "Lamplight on linen". Section ground is `linen` (the button hover colour, renamed from `cream-bright`). Fronts are lamp amber `#e9a43f`, sides terracotta `#a8482a`, outline espresso `#26160e`. Cube depth goes from 1 to 1.6 cells, so the visible side at full turn is about 0.55 of a cell instead of 0.34. Outlines are drawn with Three's fat-line addon at 1.5 CSS px, and the SVG fallback uses the same width.
+**Decision:** "Lamplight on linen". The background is `linen` (renamed from `cream-bright`). Fronts are lamp amber `#e9a43f`, sides terracotta `#a8482a`, outlines espresso `#26160e`. Cubes are deeper (1 → 1.6 cells), so more side shows when turned (0.55 of a cell, was 0.34). Outlines are 1.5 CSS px, in both WebGL and the SVG fallback.
 
-**Why:** Every colour is already in the painting: the word is the lamp, the sides are the floor. Linen keeps the page warm after the espresso hero without stacking two dark sections. Depth and outline width are what give the reference its weight.
+**Why:** Every colour is from the picture: the word is the lamp, the sides are the floor. Linen keeps the page warm after the dark hero, without two dark sections in a row. Depth and thicker lines give the letters weight.
 
 **Trade-offs and risks:**
 
-- Deeper cubes make the word slightly wider at full turn. The frame margin covers it.
-- Fat lines are one more draw pass and a small addon import. Still two draw calls for the word plus one for the outline.
-- Terracotta on the sides is the same hue the dialog uses for a wrong answer. Here it reads as floor, not error, because it is never alone.
+- Deeper cubes make the word a bit wider when turned. The margin covers it.
+- Fat lines are one more pass and a small import. Still two draw calls for the word, plus one for the outline.
+- Terracotta is also the "wrong answer" colour in the dialog. Here it looks like the floor, because it's never on its own.
 
-**Validation:** TypeScript and lint pass. Checked in Chrome at full turn and front-on.
+**Validation:** TypeScript and lint pass. Checked in Chrome, turned fully and front-on.
 
-**Lesson:** Weight in a 3D wordmark comes from depth and line width, not from colour.
+**Lesson:** A 3D word gets its weight from depth and line width, not colour.
 
 ---
 
-# ADR-021: Benefits section after the hero, built in code with one bitmap
+# ADR-021: Benefits section built in code, with one image
 
 - Date: 2026-10-30
 - Status: Implemented in `app/components/landing/benefits/`.
 
-**Context:** The hero asks "Where do you start?". The next section answers it in three steps (find the skill, get the practice, do a little tonight). It was designed in a throwaway HTML prototype over nine rounds, then moved into the app.
+**Context:** The hero asks "Where do you start?". The next section answers in three steps: find the skill, get the practice, do a little tonight. I designed it in a throwaway HTML prototype over nine rounds, then moved it into the app.
 
-**Options:** Card images exported from a design tool · Everything as one big illustration · Cards in HTML/CSS, two drawings as inline SVG, one collage as a bitmap
+**Options:** Card images from a design tool · One big illustration · Cards in HTML/CSS, two drawings as inline SVG, one collage as an image
 
-**Decision:** Cards, headings, crossword tiles and the stamp edge are HTML and CSS. The two drawn worksheets are inline SVG components. Only the worksheet collage is an image, loaded with `next/image`. The stamp edge is one CSS mask (`stamp-edge`), and its shadow is a filter on the parent (`paper-shadow`). Cards use CSS subgrid so the artwork starts at the same height in all three.
+**Decision:** Cards, headings, crossword tiles and the stamp edge are HTML and CSS. The two drawn worksheets are inline SVG. Only the worksheet collage is an image (`next/image`). The stamp edge is one CSS mask (`stamp-edge`), and its shadow is a filter on the parent (`paper-shadow`). The cards use CSS subgrid, so the pictures line up across all three.
 
-**Why:** Text in code stays sharp, searchable and readable by screen readers. SVG keeps the fractions crisp at any size. A mask cuts copy and artwork as one shape, which a border or background trick cannot do.
+**Why:** Text in code stays sharp, searchable and readable by screen readers. SVG keeps the fractions sharp at any size. A mask cuts the text and picture as one shape, which a border can't do.
 
 **Trade-offs and risks:**
 
-- Six new colour tokens. Peach, print and print-orange come from the collage, not the hero painting.
-- A fourth font (Patrick Hand), used only inside the drawings.
-- The SVG drawings are hand-written path data. Editing them means editing coordinates.
-- Card 1's title repeats "tricky bit" from the heading. Left for a later copy pass.
+- Six new colours. Peach, print and print-orange come from the collage, not the hero.
+- A fourth font (Patrick Hand), only used in the drawings.
+- The SVG drawings are hand-written paths. Changing them means editing coordinates.
+- Card 1's title repeats "tricky bit" from the heading. Fix it in a later copy pass.
 
 **Validation:** TypeScript and ESLint pass. Checked on localhost at 1440 px and 390 px. Hero and PRACTICE unchanged.
 
-**Lesson:** Prototype in a throwaway page, then move the result across. Nine design rounds in React would have been slower.
+**Lesson:** Prototype in a throwaway page, then move it across. Nine rounds in React would have been slower.
 
 ---
 
@@ -589,9 +545,9 @@ Caching works: almost all of the extra tokens were cached this time. Note that t
 
 **Options:** Build login now · Rate limit by IP · One shared demo code, plus a saved sample result
 
-**Decision:** The route checks an `x-demo-code` header against `DEMO_ACCESS_CODE` before it reads the upload. No code on the server means no one gets in. A "Try a sample worksheet" button shows a saved result with no AI call. The upload page asks visitors not to upload a child's name or face.
+**Decision:** The route checks an `x-demo-code` header against `DEMO_ACCESS_CODE` before it reads the upload. If the server has no code set, no one gets in. A "Try a sample worksheet" button shows a saved result with no AI call. The upload page asks visitors not to upload a child's name or face.
 
-**Why:** Login done in a rush is how holes happen. A shared code takes an hour, and the check sits where the login check will go later. The sample lets busy visitors see Fawna work in one click.
+**Why:** Rushed login is how security holes happen. A shared code takes an hour, and the check sits where the login check will go later. The sample lets busy visitors see Fawna work in one click.
 
 **Trade-offs and risks:**
 
@@ -599,4 +555,43 @@ Caching works: almost all of the extra tokens were cached this time. Note that t
 - No limit per person. The OpenAI monthly cap is the safety net.
 - Replaced by Supabase login later.
 
-**Validation:** Lint and build pass. Production server returns 401 with no code and with a wrong code.
+**Validation:** Lint and build pass. The production server returns 401 with no code and with a wrong code.
+
+---
+
+# ADR-023: Upload page looks like a marked worksheet
+
+- Date: 2026-10-30
+- Status: Implemented in `app/upload/page.tsx`, `ImageUpload.tsx`, `ResultsList.tsx`.
+
+**Context:** The live upload page worked but looked plain, and nothing like the landing page.
+
+**Decision:** The page looks like paper on a desk: linen background and paper sheets with stamp edges. The heading has the terracotta pen circle (`ink_circular.png`). Buttons use PRACTICE colours: honey (sample) and olive (mark). Results look like a marked worksheet: olive ticks, terracotta crosses, the child's answer in Patrick Hand (crossed out when wrong), and a "Practise" tag for the skill. No logic changed.
+
+**Motion:** Following Emil Kowalski's rules, only three things move, and each has a reason:
+
+- Buttons press in (scale 0.97, 150 ms), so a click feels heard.
+- Results rise in (260 ms, 40 ms apart), so the parent sees them arrive.
+- A spinner shows the AI is still working.
+
+They share one curve, `--ease-snappy`. With reduced motion on, things just fade in.
+
+**Contrast:** Espresso on honey: 8.2. Linen on olive: 4.7. Dark text on olive (3.4) fails, so I don't use it.
+
+**Trade-offs and risks:**
+
+- On laptops the results appear below the fold, so the parent has to scroll.
+- The green underline and divider images are still unused (old forest colours).
+
+**Validation:** Lint and build pass. Checked in Chrome at 1390 px, before and after the sample. Phone width not checked yet.
+
+# ADR-024: Upload page in the PRACTICE pixel-block look
+
+- Date: 2026-10-30
+- Status: Implemented in `app/upload/page.tsx`, `ImageUpload.tsx`, `ResultsList.tsx`, `globals.css`. Builds on ADR-023.
+
+**Context:** The upload page should feel whimsical, cosy and easy to use, and look like the landing page's PRACTICE letters. The page background is `#FCF3E6`, a step darker than the `paper` cards so their stamp edges show (a `#FFFAF2` page hid them).
+
+**Decision:** Cards keep the landing page's stamp edge and `paper` colour, so the upload page and the benefit cards look like one family; the slightly darker page lets their stamp edges show. The heading's ink circle was removed (it read as a stain). Pixel details come from the PRACTICE letters: step numbers are honey cubes with a brick (`#a8482a`, the cube side) shadow, the photo box is a faint Snake-board grid you click, tap or drop a photo onto, a three-pixel snake hops across the button while marking (`steps()`, one cell at a time), and a fading trail of honey pixels divides off the privacy note.
+
+**Motion:** Same restraint as ADR-023. Drag-over changes only border and background colour (150 ms, `ease`). The snake is functional (the AI is still working) and `linear`-stepped because it is constant motion. Reduced motion: the snake stays still. Hover styles rely on Tailwind v4's `hover:`, which only applies on devices that can hover.
