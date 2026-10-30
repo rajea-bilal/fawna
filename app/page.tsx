@@ -1,13 +1,16 @@
-import ImageUpload from "./components/ImageUpload";
+import SiteHeader from "./components/landing/SiteHeader";
+import Hero from "./components/landing/Hero";
+import BenefitsSection from "./components/landing/benefits/BenefitsSection";
+import PracticeSection from "./components/landing/PracticeSection";
+
 export default function Home() {
   return (
-    <div className="border border-green-500 flex flex-col flex-1  bg-zinc-50 font-sans dark:bg-zinc-800">
-      <main className="border border-blue-500 p-10">
-        <h1 className="text-4xl font-bold">Fawna Learning</h1>
-
-        <section className="flex items-center justify-center border border-red-500">
-          <ImageUpload />
-        </section>
+    <div className="relative flex flex-1 flex-col bg-page font-sans text-ink">
+      <SiteHeader />
+      <main>
+        <Hero />
+        <BenefitsSection />
+        <PracticeSection />
       </main>
     </div>
   );

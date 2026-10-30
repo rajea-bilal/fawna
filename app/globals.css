@@ -8,8 +8,87 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-nunito);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
+  --font-hand: var(--font-patrick-hand);
+}
+
+/* Fawna brand palette, sampled from the hero artwork. Every colour is
+   already in the picture: the lamp glow, the table's shadow, the floor. */
+@theme {
+  --color-page: #ffffff; /* page background below the hero */
+  --color-cream: #f5e7d2; /* hero text, primary button, lamp glow */
+  --color-linen: #fbf3e6; /* primary button hover, section grounds */
+  --color-espresso: #26160e; /* hero overlay, button text and shadow */
+  --color-ink: #33211a; /* body text on light pages */
+  --color-terracotta: #c4502f; /* dialog accent (wrong-answer mark) */
+  --color-ivory: #f6f0de; /* dialog background (legacy, see ADR-018) */
+  --color-forest: #0d513a; /* dialog accents (legacy, see ADR-018) */
+  --color-forest-deep: #073624; /* dialog text (legacy, see ADR-018) */
+  --color-ochre: #f2b02e;
+
+  /* Benefits section (ADR-021). Olive and paper are Fawna's; peach, print
+     and print-orange are the three inks of the worksheet collage. */
+  --color-olive: #6a7051; /* crossword tiles */
+  --color-paper: #fffaf2; /* stamp-edged cards, a step brighter than linen */
+  --color-rust: #7d3219; /* card eyebrows */
+  --color-peach: #f2d0b0; /* collage paper */
+  --color-print: #1e1915; /* collage ink line */
+  --color-print-orange: #e86748; /* collage panels */
+}
+
+/* Hero readability veil. On phones a shadow rises from the floor to meet
+   the copy. On large screens the shadow falls from the left, where the
+   copy sits, and clears over the family; a faint top band settles the
+   header over the window. */
+@utility hero-veil {
+  background: linear-gradient(
+    180deg,
+    --alpha(var(--color-espresso) / 40%) 0%,
+    --alpha(var(--color-espresso) / 0%) 16%,
+    --alpha(var(--color-espresso) / 0%) 30%,
+    --alpha(var(--color-espresso) / 86%) 58%,
+    --alpha(var(--color-espresso) / 92%) 100%
+  );
+
+  @media (width >= 64rem) {
+    background:
+      linear-gradient(
+        90deg,
+        --alpha(var(--color-espresso) / 86%) 0%,
+        --alpha(var(--color-espresso) / 60%) 38%,
+        --alpha(var(--color-espresso) / 0%) 68%
+      ),
+      linear-gradient(
+        180deg,
+        --alpha(var(--color-espresso) / 28%) 0%,
+        --alpha(var(--color-espresso) / 0%) 30%
+      );
+  }
+}
+
+/* Postage-stamp edge. One mask cuts round dips into all four sides of the
+   element, artwork included. Layer 1 is a grid of transparent circles
+   centred on the edges; layer 2 is a solid box inset by half a step, which
+   fills the circles that fall inside. "round" fits a whole number of dips
+   per side so every corner ends the same way. */
+@utility stamp-edge {
+  --stamp-r: 6.5px; /* dip radius: 13px wide, 6.5px deep */
+  --stamp-s: 26px; /* one dip plus one tooth */
+  mask:
+    radial-gradient(var(--stamp-r), #0000 96%, #000) round
+      calc(-0.5 * var(--stamp-s)) calc(-0.5 * var(--stamp-s)) /
+      var(--stamp-s) var(--stamp-s),
+    linear-gradient(#000 0 0) no-repeat 50% /
+      calc(100% - var(--stamp-s)) calc(100% - var(--stamp-s));
+}
+
+/* A shadow that follows the stamp outline. box-shadow would draw the
+   uncut rectangle, so this sits on the parent as a filter instead. */
+@utility paper-shadow {
+  filter: drop-shadow(0 1px 1px --alpha(var(--color-ink) / 14%))
+    drop-shadow(0 6px 10px --alpha(var(--color-ink) / 5%));
 }
 
 @media (prefers-color-scheme: dark) {

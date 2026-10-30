@@ -469,3 +469,112 @@ Caching works: almost all of the extra tokens were cached this time. Note that t
 **Validation:** 0/2 → 2/2 skills on golden-set entry 1, held over two runs. Not yet tested on a new worksheet.
 
 **Lesson:** An allowed list isn't the same as an explained list. If the AI has to choose, tell it what each choice means.
+
+---
+
+# ADR-018: Hero palette from the painting, not from a brand green
+
+- Date: 2026-10-27
+- Status: Implemented on the landing page.
+
+**Context:** The first hero put a dark green overlay over the kitchen illustration, with ivory text and ivory buttons, and left a white band below. It looked like a photo with a banner on top. The illustration is warm throughout (plaster wall, terracotta floor, walnut table, amber lamp, plum sky), and the artist left the left third as an empty wall.
+
+**Options:** Keep green and tune it · No overlay, dark text on the bare wall · A dusk-plum overlay · An espresso overlay (the table's shadow)
+
+**Decision:** Espresso overlay, cream text, one cream button with espresso text. Every colour is sampled from the picture. The hero fills the first screen. Headings move from Oswald to Fraunces, a soft variable serif. On phones the copy drops to the bottom over a rising shadow so the family stays in view.
+
+| Token | Value | Used for |
+|---|---|---|
+| `cream` | `#f5e7d2` | hero text, primary button |
+| `linen` | `#fbf3e6` | button hover, section grounds |
+| `espresso` | `#26160e` | overlay, button text and shadow |
+| `ink` | `#33211a` | body text on light pages |
+
+**Why:** Green is the opposite temperature to the painting, so it reads as laid on top. Brown is already in the scene, so the overlay reads as evening light. One bright button means the eye lands on the family first.
+
+**Trade-offs and risks:**
+
+- The dialog in `ExamplePreview` still uses the old `ivory` and `forest` tokens. They stay in `globals.css` until it is restyled.
+- Cream on the veiled wall is strong at headline size. Body copy must stay short.
+- Lamp amber (`#e9a43f`) and terracotta were considered for an accent word in the headline and rejected. Cream alone is quieter and more storybook.
+
+**Validation:** TypeScript and lint pass. Checked in the browser at desktop and phone widths.
+
+**Lesson:** When a page has a strong picture, take the palette from the picture. The brand colour can follow.
+
+---
+
+# ADR-019: Plain Three.js for the PRACTICE block letters
+
+- Date: 2026-10-28
+- Status: Implemented in `app/components/landing/blockLetters/`.
+
+**Context:** The section after the hero shows PRACTICE as 3D block lettering that rocks gently, in the style of Relume's PUBLISH. The letters must be real geometry, not image frames.
+
+**Options:** CSS 3D transforms (no dependency, about 350 face elements) · Plain Three.js (one scene, two draw calls) · React Three Fiber (adds a React reconciler on top of Three)
+
+**Decision:** Plain Three.js, loaded with `next/dynamic` only when the section is near the viewport. One cube per filled grid cell, all merged into one mesh with per-vertex colours and one line set for outlines. Orthographic camera, transparent canvas, rotation ±20° over 11 s. A server-rendered SVG of the flat word shows first and stays for reduced motion or missing WebGL.
+
+**Why:** The spec asked for an orthographic camera and a WebGL fallback, which points at WebGL. One scene does not need a reconciler. Merging the cubes keeps the frame cost flat however long the word gets.
+
+**Trade-offs and risks:**
+
+- Three.js adds roughly 150 KB gzipped to the client, but only on this page and only after the section is near.
+- WebGL draws its own lines one device pixel wide, so outlines use the fat-line addon (`LineSegments2`), which needs the canvas size on every resize.
+- Reduced motion and no-WebGL paths are covered by code and types but were not exercised in a browser.
+
+**Validation:** TypeScript and lint pass. In Chrome: spelling correct, outlines present, page background shows through, 60 fps, SVG removed after the first WebGL frame, 121 cells server-rendered, no Three.js in the initial HTML. Checked at 390, 700 and 1393 px wide.
+
+**Lesson:** Build geometry once, merge it, and let the GPU draw it in one go. Per-object meshes are the slow default.
+
+---
+
+# ADR-020: PRACTICE in Fawna colours, with deeper cubes
+
+- Date: 2026-10-28
+- Status: Implemented.
+
+**Context:** The block letters shipped in Relume's yellows on a white ground. White is the one colour not in the hero painting, so the section read as a different site. The cubes also looked thin when turned, and the outlines were hairlines on retina screens.
+
+**Options:** Lamp amber on linen · Cream on espresso · Terracotta on linen
+
+**Decision:** "Lamplight on linen". Section ground is `linen` (the button hover colour, renamed from `cream-bright`). Fronts are lamp amber `#e9a43f`, sides terracotta `#a8482a`, outline espresso `#26160e`. Cube depth goes from 1 to 1.6 cells, so the visible side at full turn is about 0.55 of a cell instead of 0.34. Outlines are drawn with Three's fat-line addon at 1.5 CSS px, and the SVG fallback uses the same width.
+
+**Why:** Every colour is already in the painting: the word is the lamp, the sides are the floor. Linen keeps the page warm after the espresso hero without stacking two dark sections. Depth and outline width are what give the reference its weight.
+
+**Trade-offs and risks:**
+
+- Deeper cubes make the word slightly wider at full turn. The frame margin covers it.
+- Fat lines are one more draw pass and a small addon import. Still two draw calls for the word plus one for the outline.
+- Terracotta on the sides is the same hue the dialog uses for a wrong answer. Here it reads as floor, not error, because it is never alone.
+
+**Validation:** TypeScript and lint pass. Checked in Chrome at full turn and front-on.
+
+**Lesson:** Weight in a 3D wordmark comes from depth and line width, not from colour.
+
+---
+
+# ADR-021: Benefits section after the hero, built in code with one bitmap
+
+- Date: 2026-10-30
+- Status: Implemented in `app/components/landing/benefits/`.
+
+**Context:** The hero asks "Where do you start?". The next section answers it in three steps (find the skill, get the practice, do a little tonight). It was designed in a throwaway HTML prototype over nine rounds, then moved into the app.
+
+**Options:** Card images exported from a design tool · Everything as one big illustration · Cards in HTML/CSS, two drawings as inline SVG, one collage as a bitmap
+
+**Decision:** Cards, headings, crossword tiles and the stamp edge are HTML and CSS. The two drawn worksheets are inline SVG components. Only the worksheet collage is an image, loaded with `next/image`. The stamp edge is one CSS mask (`stamp-edge`), and its shadow is a filter on the parent (`paper-shadow`). Cards use CSS subgrid so the artwork starts at the same height in all three.
+
+**Why:** Text in code stays sharp, searchable and readable by screen readers. SVG keeps the fractions crisp at any size. A mask cuts copy and artwork as one shape, which a border or background trick cannot do.
+
+**Trade-offs and risks:**
+
+- Six new colour tokens. Peach, print and print-orange come from the collage, not the hero painting.
+- A fourth font (Patrick Hand), used only inside the drawings.
+- The SVG drawings are hand-written path data. Editing them means editing coordinates.
+- Card 1's title repeats "tricky bit" from the heading. Left for a later copy pass.
+
+**Validation:** TypeScript and ESLint pass. Checked on localhost at 1440 px and 390 px. Hero and PRACTICE unchanged.
+
+**Lesson:** Prototype in a throwaway page, then move the result across. Nine design rounds in React would have been slower.
+
