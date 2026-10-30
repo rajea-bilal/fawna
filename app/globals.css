@@ -27,6 +27,42 @@
   --color-forest: #0d513a; /* dialog accents (legacy, see ADR-018) */
   --color-forest-deep: #073624; /* dialog text (legacy, see ADR-018) */
   --color-ochre: #f2b02e;
+  --color-honey: #e9a43f; /* PRACTICE cube fronts, upload page main button */
+
+  /* Upload page motion (ADR-023). Fast start, gentle stop. Used with the
+     motion-safe: variant, so reduced-motion users get the end state at once. */
+  --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
+  --animate-rise: rise 260ms var(--ease-snappy) both;
+  --animate-fade: fade 200ms var(--ease-snappy) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+      filter: blur(4px);
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* Upload page loader (ADR-024). Three pixels hop one 6px cell at a time,
+     like the Snake game: steps(), not a smooth glide. 11 hops = from just
+     off the left edge (-18px) to past the 48px track. */
+  --animate-snake: snake 1.1s steps(11) infinite;
+
+  @keyframes snake {
+    from {
+      transform: translateX(-18px);
+    }
+    to {
+      transform: translateX(48px);
+    }
+  }
+
+  --color-brick: #a8482a; /* PRACTICE cube sides, upload page pixel shadows */
 
   /* Benefits section (ADR-021). Olive and paper are Fawna's; peach, print
      and print-orange are the three inks of the worksheet collage. */
@@ -89,6 +125,27 @@
 @utility paper-shadow {
   filter: drop-shadow(0 1px 1px --alpha(var(--color-ink) / 14%))
     drop-shadow(0 6px 10px --alpha(var(--color-ink) / 5%));
+}
+
+/* A faint Snake board: 20px cells drawn with two 1px line gradients.
+   Image only, so a bg- colour class can sit under it and change. */
+@utility pixel-grid {
+  background-image:
+    linear-gradient(--alpha(var(--color-ink) / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, --alpha(var(--color-ink) / 7%) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: -1px -1px;
+}
+
+/* A snake's trail of honey pixels that fades out to the right. */
+@utility pixel-trail {
+  height: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-honey) 0 6px,
+    transparent 6px 12px
+  );
+  mask-image: linear-gradient(90deg, #000 40%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {

@@ -17,3 +17,14 @@ export const quietLink =
 // The main action on light sections. Espresso on linen, the hero button inverted.
 export const darkButton =
   "inline-flex items-center justify-center rounded-lg bg-espresso text-base font-semibold text-cream transition-colors hover:bg-ink active:translate-y-px focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-espresso";
+
+// Upload page buttons press in slightly (scale 0.97) so a click feels felt.
+// Transitions, not keyframes, so a quick double-click blends instead of queueing.
+const pressable =
+  "transition-[transform,filter] duration-150 ease-snappy motion-safe:active:scale-[0.97]";
+
+// Upload page main action. Espresso on honey, the PRACTICE cube colour (contrast 8.2).
+export const honeyButton = `${pressable} inline-flex items-center justify-center gap-2 rounded-lg bg-honey text-base font-semibold text-espresso shadow-sm shadow-espresso/15 hover:brightness-95 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-espresso`;
+
+// Upload page second action. Linen on olive (contrast 4.7). Dark text on olive is too faint.
+export const oliveButton = `${pressable} inline-flex items-center justify-center gap-2 rounded-lg bg-olive text-base font-semibold text-linen hover:brightness-90 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-olive`;
