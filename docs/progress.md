@@ -33,6 +33,7 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 | Demo code lock, checked before the upload is read (ADR-022) | `route.ts` | Yes, 401 with no code and a wrong code |
 | Sample worksheet button (no AI call) | `lib/demo/sampleResult.ts` | Yes, clicked in Chrome |
 | Each question's result and skill on the page | `ResultsList.tsx` | Build only |
+| "Coming soon" card under the results: explain, check, practise (ADR-015) | `ResultsList.tsx` | Yes, with the sample in Chrome |
 | Shared counting for live and sample results | `lib/ai/summariseResult.ts` | Build only |
 | Logs show counts only, never a child's answers | `route.ts` | Yes |
 | Link previews for getfawna.com | `app/layout.tsx` | Yes, tags in the built page |
