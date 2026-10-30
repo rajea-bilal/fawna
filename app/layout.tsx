@@ -36,7 +36,7 @@ const description =
 
 export const metadata: Metadata = {
   // Lets link previews turn relative paths into full URLs on our domain.
-  metadataBase: new URL("https://getfawna.com"),
+  metadataBase: new URL("https://www.getfawna.com"),
   title: "Fawna Learning",
   description,
   // What link previews show (LinkedIn, Slack, email).
