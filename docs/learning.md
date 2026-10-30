@@ -51,3 +51,20 @@ type MarkedQuestionType = {
   result: "correct" | "incorrect" | "unreadable";
 };
 ```
+
+What OpenAI receives on every call, in this order:
+
+1. Instructions + skill list ← the same every time
+2. Schema (the reply shape) ← the same every time
+3. "The child is in Year 5." ← the same for now
+4. The photo ← different for each worksheet
+   How the cache works:
+   OpenAI compares your new request with one it saw recently, from the start. It counts how far the two match. It stops at the first difference.
+
+The matching part is cached, so OpenAI doesn't redo that work and charges you less. Everything after the first difference is charged at the normal price.
+
+Three things to know:
+
+Order matters. The parts that stay the same go first, and the photo goes last. Your code already does this. If the photo came first, nothing would ever match.
+Cached isn't free. It's cheaper, but you still pay something.
+The cache doesn't last forever. It only lasts a short while. If no one uses Fawna for a while, the next call starts again at 0 cached.
