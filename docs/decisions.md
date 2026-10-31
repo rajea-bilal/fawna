@@ -224,12 +224,12 @@ Status: **Proposed** (agreed, not built) · **Accepted** (being built) · **Impl
 
 **Decision:** A different shape for each result. `result` says which one:
 
-| Result | Skill? |
-|---|---|
-| `correct` | No |
-| `incorrect` | **Required:** the skill for the step that went wrong |
-| `unreadable` | No. The AI must not guess. |
-| `blank` | **Required:** the main skill the question tests, so it can go into practice. If every answer is crossed out, it counts as blank. |
+| Result       | Skill?                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `correct`    | No                                                                                                                               |
+| `incorrect`  | **Required:** the skill for the step that went wrong                                                                             |
+| `unreadable` | No. The AI must not guess.                                                                                                       |
+| `blank`      | **Required:** the main skill the question tests, so it can go into practice. If every answer is crossed out, it counts as blank. |
 
 A skill is either **from the list** (`skillId`) or **suggested** (category and a short name).
 
@@ -261,7 +261,7 @@ A skill is either **from the list** (`skillId`) or **suggested** (category and a
 - **method:** follow steps → worked example
 - **idea:** understand why → a picture first
 
-Test: *"Could a child get this right just by remembering one thing?"* Yes means fact.
+Test: _"Could a child get this right just by remembering one thing?"_ Yes means fact.
 
 **Trade-offs and risks:**
 
@@ -343,10 +343,10 @@ A check question replaces the "Understood" button, because children (and adults)
 
 **Decision:** Add an optional `useWhen` hint, only to skills that overlap. It says when to pick that skill. Start with two:
 
-| Skill | Pick it when |
-|---|---|
-| `percentage-facts` | The digits are different from the right answer (25% → 0.4). The child doesn't know the fact. |
-| `dividing-by-10-100-1000` | The digits are the same, but the point is in the wrong place (0.66 for 0.066, 2.5 for 0.25). |
+| Skill                                 | Pick it when                                                                                                                                   |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `percentage-facts`                    | The digits are different from the right answer (25% → 0.4). The child doesn't know the fact.                                                   |
+| `dividing-by-10-100-1000`             | The digits are the same, but the point is in the wrong place (0.66 for 0.066, 2.5 for 0.25).                                                   |
 | `fraction-means-division` (new, idea) | The child writes the fraction's own numbers after the point (3/4 → 0.34). Memorising 3/4 = 0.75 won't fix this: they'd still write 2/5 → 0.25. |
 
 `fraction-means-division` starts at Year 4, not Year 6 where the curriculum names it, because the mistake shows up as soon as children start decimals.
@@ -375,12 +375,12 @@ The schema says **which answers are allowed**. It doesn't say **what they mean**
 
 **Options:**
 
-| Option | Good | Bad |
-|---|---|---|
-| Keep ids only | Cheapest | The AI guesses meanings. This is how we got 0/2. |
-| Put the list in each skill's schema description | Next to the id | A schema enum can't describe each value well. Harder to read. |
-| Put the list in the **input**, next to the photo | Easy to change per child | Changes position on each call, so it's less likely to be cached |
-| Put the list in the **instructions** | Same text every call, so OpenAI caches it and charges less. Kept in one place. | Sent on every call (about 2,000 tokens) |
+| Option                                           | Good                                                                           | Bad                                                             |
+| ------------------------------------------------ | ------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Keep ids only                                    | Cheapest                                                                       | The AI guesses meanings. This is how we got 0/2.                |
+| Put the list in each skill's schema description  | Next to the id                                                                 | A schema enum can't describe each value well. Harder to read.   |
+| Put the list in the **input**, next to the photo | Easy to change per child                                                       | Changes position on each call, so it's less likely to be cached |
+| Put the list in the **instructions**             | Same text every call, so OpenAI caches it and charges less. Kept in one place. | Sent on every call (about 2,000 tokens)                         |
 
 **Decision:** Instructions. Code builds one line per skill from `MATH_CATEGORIES` (id, name, kind, hint if there is one) and adds it to `MARKING_INSTRUCTIONS`. The list is never written out by hand, so it can't drift from `mathSkills.ts`. We log `response.usage` to see the real token cost.
 
@@ -400,15 +400,15 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 
 ![Token usage after the change](images/token_usage_after_test.png)
 
-| | Before (ids only) | After | After, run again |
-|---|---|---|---|
-| Tokens in | 4,542 (4,539 cached) | 6,567 (0 cached) | 6,567 (6,564 cached) |
-| Tokens out | 925 | 928 | 876 |
-| Marking | 10/10 | 10/10, but 4a/4b and 5a/5b joined into one row each | 10/10 |
-| Q2 skill | `fractions-to-decimals` ❌ | `dividing-by-10-100-1000` ✅ | same ✅ |
-| Q8 skill | `fraction-decimal-percent` ❌ | `percentage-facts` ✅ | same ✅ |
-| **Skills** | **0/2** | **2/2** | **2/2** |
-| Time | 11.2 s | ~12 s | 11.6 s |
+|            | Before (ids only)             | After                                               | After, run again     |
+| ---------- | ----------------------------- | --------------------------------------------------- | -------------------- |
+| Tokens in  | 4,542 (4,539 cached)          | 6,567 (0 cached)                                    | 6,567 (6,564 cached) |
+| Tokens out | 925                           | 928                                                 | 876                  |
+| Marking    | 10/10                         | 10/10, but 4a/4b and 5a/5b joined into one row each | 10/10                |
+| Q2 skill   | `fractions-to-decimals` ❌    | `dividing-by-10-100-1000` ✅                        | same ✅              |
+| Q8 skill   | `fraction-decimal-percent` ❌ | `percentage-facts` ✅                               | same ✅              |
+| **Skills** | **0/2**                       | **2/2**                                             | **2/2**              |
+| Time       | 11.2 s                        | ~12 s                                               | 11.6 s               |
 
 **What this shows:**
 
@@ -439,12 +439,12 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 
 **Decision:** An espresso layer, cream text, and one cream button with espresso text. Every colour is taken from the picture. The hero fills the first screen. Headings change from Oswald to Fraunces, a soft serif. On phones the text moves to the bottom over a shadow, so the family stays in view.
 
-| Token | Value | Used for |
-|---|---|---|
-| `cream` | `#f5e7d2` | hero text, main button |
-| `linen` | `#fbf3e6` | button hover, section backgrounds |
+| Token      | Value     | Used for                           |
+| ---------- | --------- | ---------------------------------- |
+| `cream`    | `#f5e7d2` | hero text, main button             |
+| `linen`    | `#fbf3e6` | button hover, section backgrounds  |
 | `espresso` | `#26160e` | dark layer, button text and shadow |
-| `ink` | `#33211a` | body text on light pages |
+| `ink`      | `#33211a` | body text on light pages           |
 
 **Why:** Green is cool and the picture is warm, so the green looked stuck on top. Brown is already in the scene, so the layer looks like evening light. With only one bright button, you see the family first.
 
@@ -484,114 +484,3 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 **Lesson:** Build the shapes once, merge them, and let the GPU draw them in one go. One mesh per cube is the slow default.
 
 ---
-
-# ADR-020: PRACTICE in Fawna colours, with deeper cubes
-
-- Date: 2026-10-28
-- Status: Implemented.
-
-**Context:** The letters first used Relume's yellows on white. White isn't in the hero picture, so the section looked like a different site. The cubes also looked thin when turned, and the outlines were too thin on retina screens.
-
-**Options:** Lamp amber on linen · Cream on espresso · Terracotta on linen
-
-**Decision:** "Lamplight on linen". The background is `linen` (renamed from `cream-bright`). Fronts are lamp amber `#e9a43f`, sides terracotta `#a8482a`, outlines espresso `#26160e`. Cubes are deeper (1 → 1.6 cells), so more side shows when turned (0.55 of a cell, was 0.34). Outlines are 1.5 CSS px, in both WebGL and the SVG fallback.
-
-**Why:** Every colour is from the picture: the word is the lamp, the sides are the floor. Linen keeps the page warm after the dark hero, without two dark sections in a row. Depth and thicker lines give the letters weight.
-
-**Trade-offs and risks:**
-
-- Deeper cubes make the word a bit wider when turned. The margin covers it.
-- Fat lines are one more pass and a small import. Still two draw calls for the word, plus one for the outline.
-- Terracotta is also the "wrong answer" colour in the dialog. Here it looks like the floor, because it's never on its own.
-
-**Validation:** TypeScript and lint pass. Checked in Chrome, turned fully and front-on.
-
-**Lesson:** A 3D word gets its weight from depth and line width, not colour.
-
----
-
-# ADR-021: Benefits section built in code, with one image
-
-- Date: 2026-10-30
-- Status: Implemented in `app/components/landing/benefits/`.
-
-**Context:** The hero asks "Where do you start?". The next section answers in three steps: find the skill, get the practice, do a little tonight. I designed it in a throwaway HTML prototype over nine rounds, then moved it into the app.
-
-**Options:** Card images from a design tool · One big illustration · Cards in HTML/CSS, two drawings as inline SVG, one collage as an image
-
-**Decision:** Cards, headings, crossword tiles and the stamp edge are HTML and CSS. The two drawn worksheets are inline SVG. Only the worksheet collage is an image (`next/image`). The stamp edge is one CSS mask (`stamp-edge`), and its shadow is a filter on the parent (`paper-shadow`). The cards use CSS subgrid, so the pictures line up across all three.
-
-**Why:** Text in code stays sharp, searchable and readable by screen readers. SVG keeps the fractions sharp at any size. A mask cuts the text and picture as one shape, which a border can't do.
-
-**Trade-offs and risks:**
-
-- Six new colours. Peach, print and print-orange come from the collage, not the hero.
-- A fourth font (Patrick Hand), only used in the drawings.
-- The SVG drawings are hand-written paths. Changing them means editing coordinates.
-- Card 1's title repeats "tricky bit" from the heading. Fix it in a later copy pass.
-
-**Validation:** TypeScript and ESLint pass. Checked on localhost at 1440 px and 390 px. Hero and PRACTICE unchanged.
-
-**Lesson:** Prototype in a throwaway page, then move it across. Nine rounds in React would have been slower.
-
----
-
-# ADR-022: Demo code and sample result, before login
-
-- Date: 2026-10-30
-- Status: Implemented in `app/api/analyze/route.ts`, `app/components/ImageUpload.tsx` and `lib/demo/sampleResult.ts`.
-
-**Context:** Fawna needs a public URL today for a job application. `/api/analyze` has no login, so anyone could run up the OpenAI bill.
-
-**Options:** Build login now · Rate limit by IP · One shared demo code, plus a saved sample result
-
-**Decision:** The route checks an `x-demo-code` header against `DEMO_ACCESS_CODE` before it reads the upload. If the server has no code set, no one gets in. A "Try a sample worksheet" button shows a saved result with no AI call. The upload page asks visitors not to upload a child's name or face.
-
-**Why:** Rushed login is how security holes happen. A shared code takes an hour, and the check sits where the login check will go later. The sample lets busy visitors see Fawna work in one click.
-
-**Trade-offs and risks:**
-
-- One code for everyone. If it leaks, change it in the host settings.
-- No limit per person. The OpenAI monthly cap is the safety net.
-- Replaced by Supabase login later.
-
-**Validation:** Lint and build pass. The production server returns 401 with no code and with a wrong code.
-
----
-
-# ADR-023: Upload page looks like a marked worksheet
-
-- Date: 2026-10-30
-- Status: Implemented in `app/upload/page.tsx`, `ImageUpload.tsx`, `ResultsList.tsx`.
-
-**Context:** The live upload page worked but looked plain, and nothing like the landing page.
-
-**Decision:** The page looks like paper on a desk: linen background and paper sheets with stamp edges. The heading has the terracotta pen circle (`ink_circular.png`). Buttons use PRACTICE colours: honey (sample) and olive (mark). Results look like a marked worksheet: olive ticks, terracotta crosses, the child's answer in Patrick Hand (crossed out when wrong), and a "Practise" tag for the skill. No logic changed.
-
-**Motion:** Following Emil Kowalski's rules, only three things move, and each has a reason:
-
-- Buttons press in (scale 0.97, 150 ms), so a click feels heard.
-- Results rise in (260 ms, 40 ms apart), so the parent sees them arrive.
-- A spinner shows the AI is still working.
-
-They share one curve, `--ease-snappy`. With reduced motion on, things just fade in.
-
-**Contrast:** Espresso on honey: 8.2. Linen on olive: 4.7. Dark text on olive (3.4) fails, so I don't use it.
-
-**Trade-offs and risks:**
-
-- On laptops the results appear below the fold, so the parent has to scroll.
-- The green underline and divider images are still unused (old forest colours).
-
-**Validation:** Lint and build pass. Checked in Chrome at 1390 px, before and after the sample. Phone width not checked yet.
-
-# ADR-024: Upload page in the PRACTICE pixel-block look
-
-- Date: 2026-10-30
-- Status: Implemented in `app/upload/page.tsx`, `ImageUpload.tsx`, `ResultsList.tsx`, `globals.css`. Builds on ADR-023.
-
-**Context:** The upload page should feel whimsical, cosy and easy to use, and look like the landing page's PRACTICE letters. The page background is `#FCF3E6`, a step darker than the `paper` cards so their stamp edges show (a `#FFFAF2` page hid them).
-
-**Decision:** Cards keep the landing page's stamp edge and `paper` colour, so the upload page and the benefit cards look like one family; the slightly darker page lets their stamp edges show. The heading's ink circle was removed (it read as a stain). Pixel details come from the PRACTICE letters: step numbers are honey cubes with a brick (`#a8482a`, the cube side) shadow, the photo box is a faint Snake-board grid you click, tap or drop a photo onto, a three-pixel snake hops across the button while marking (`steps()`, one cell at a time), and a fading trail of honey pixels divides off the privacy note.
-
-**Motion:** Same restraint as ADR-023. Drag-over changes only border and background colour (150 ms, `ease`). The snake is functional (the AI is still working) and `linear`-stepped because it is constant motion. Reduced motion: the snake stays still. Hover styles rely on Tailwind v4's `hover:`, which only applies on devices that can hover.
