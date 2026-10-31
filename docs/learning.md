@@ -64,3 +64,16 @@ Three things to know:
 - **Order matters.** The parts that stay the same go first, and the photo goes last. My code already does this. If the photo came first, nothing would ever match.
 - **Cached isn't free.** It's cheaper, but I still pay something.
 - **The cache doesn't last long.** If no one uses Fawna for a while, the next call starts again with nothing cached.
+
+## Words we use in Fawna
+
+| Word | Means | Not to be confused with |
+|---|---|---|
+| **Skill** | One thing a child should be able to do, from our fixed list, e.g. "Column addition with regrouping". | A topic. A skill is the exact step that went wrong. |
+| **Kind** | What sort of skill it is: **fact** (just remember it), **method** (follow steps) or **idea** (understand why). | |
+| **Suggested skill** | A skill the AI names when nothing on our list fits. It has no kind. | A skill on our list. |
+| **Skill gap** | One skill the child got wrong or left blank, with every question on the sheet that needed it. | A single wrong question. One skill gap can hold many questions. |
+| **Key** | The fixed label for a skill gap: the skill's id, or `suggested-1`, `suggested-2` for suggested skills. Used to match an explanation to its skill gap. | The title. A title can change, a key can't. |
+| **Example question** | The one question an explanation is built around: the first wrong answer in the skill gap, or the first blank if there are none. | |
+| **Explanation** | Help for one skill gap, written for the child: a title, their answer next to the right one, short steps, what went wrong, and a tip for the parent. Fact skills don't get one. | Practice. An explanation helps the child understand. Practice makes it stick. |
+| **Title** | The child-friendly name at the top of an explanation, e.g. "Carrying when you add". Written by the AI, so it can change. | The skill's name on our list. |
