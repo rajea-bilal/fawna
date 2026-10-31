@@ -7,7 +7,7 @@ Last updated: 2026-10-30
 1. A parent picks a photo of a worksheet.
 2. The browser checks it's a picture (PNG, JPEG or WebP) and not too big.
 3. The browser **shrinks** the photo and shows a preview of the whole page.
-4. The parent types the demo code and clicks **Mark worksheet**. The photo is sent to our server, which checks the code first (ADR-022).
+4. The parent types the demo code and clicks **Mark worksheet**. The photo is sent to our server, which checks the code first.
 5. The server checks it again, **shrinks it again** with sharp (a safety net), and turns it into base64.
 6. The server sends the photo and the school year (fixed at 5 for now) to OpenAI (`gpt-6.1-sol`).
 7. The AI marks every question: correct, incorrect, blank or unreadable. Wrong and blank answers get a skill from our list.
@@ -30,7 +30,7 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 | Code counts the results | `route.ts` | Yes, matched the AI's list |
 | Layered error handling (422, 502, 503, 504) | `route.ts` | 502 seen with a bad API key |
 | Preview shows the whole page (`object-contain`) | `ImageUpload.tsx` | Yes, by hand |
-| Demo code lock, checked before the upload is read (ADR-022) | `route.ts` | Yes, 401 with no code and a wrong code |
+| Demo code lock, checked before the upload is read | `route.ts` | Yes, 401 with no code and a wrong code |
 | Sample worksheet button (no AI call) | `lib/demo/sampleResult.ts` | Yes, clicked in Chrome |
 | Each question's result and skill on the page | `ResultsList.tsx` | Build only |
 | "Coming soon" card under the results: explain, check, practise (ADR-015) | `ResultsList.tsx` | Yes, with the sample in Chrome |

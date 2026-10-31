@@ -306,7 +306,7 @@ I first added a `try/catch` inside `analyzeWorksheet` that returned a response. 
 # ADR-015: Understand the mistake before practising it
 
 - Date: 2026-10-24
-- Status: Proposed (not built, waits until marking is accurate)
+- Status: Proposed. Building the Understand step first (ADR-021). The check question comes next.
 
 **Context:** Parents want the score. But giving more questions of the same type doesn't fix a misunderstanding. The child just practises the mistake.
 
@@ -482,5 +482,155 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 **Validation:** TypeScript and lint pass. In Chrome: spelling right, outlines show, page background shows through, 60 fps, SVG removed after the first WebGL frame, 121 cells rendered on the server, no Three.js in the first HTML. Checked at 390, 700 and 1393 px wide.
 
 **Lesson:** Build the shapes once, merge them, and let the GPU draw them in one go. One mesh per cube is the slow default.
+
+---
+
+# ADR-020: Build explanations before login and before more test worksheets
+
+- Date: 2026-10-31
+- Status: Accepted
+
+**Context:** Marking works and names a skill gap for each mistake. Next could be login, more test worksheets, or explanations.
+
+**Options:** Login first · Grow the golden set to 15–20 mistakes first · Explanations first
+
+**Decision:** Explanations first, on `gpt-6.1-sol`. Login waits until strangers sign up. More test worksheets can come alongside.
+
+**Why:** The demo code already stops strangers from spending OpenAI money. For now only I and parents I know will use Fawna. Login matters when Fawna needs to remember a child, and explanations don't need that yet.
+
+**Trade-offs and risks:**
+
+- Skill picks are tested on only 2 mistakes. Explanations are only as good as the skill underneath. If one looks wrong, check the skill first.
+- "Is the skill list complete?" and "does the AI pick the right skill?" are different questions. A bigger model doesn't answer the second one. Only tests do.
+
+**Validation:** None yet.
+
+**Lesson:** Ask what a feature protects today. If something else already does that job, build what tests the product.
+
+---
+
+# ADR-021: One explanation per skill gap, written for the child
+
+- Date: 2026-10-31
+- Status: Accepted
+
+**Context:** After the score, the parent clicks **How Fawna can help**. A sheet can have 15–20 mistakes, often from only a few skills.
+
+**Options:** One explanation per wrong question · One per skill gap
+
+**Decision:**
+
+- Code groups wrong and blank answers by skill into **skill gaps**. No AI call.
+- One explanation per skill gap. The example is one of the child's own wrong answers, or a blank if there isn't one.
+- Written for the child, with a parent beside them.
+- Each explanation has: a child-friendly skill name, the child's answer next to the right one, 3–5 short steps, what went wrong, and one tip for the parent.
+- **Fact** skills skip the explanation (they need recall practice, ADR-015).
+- **Suggested** skills (no `kind`) always get one.
+- Can't-read questions have no skill, so they're left out.
+
+**Why:** Six carrying mistakes need one explanation, not six. It keeps a long sheet short for a tired child. The marking AI already named the skills, so grouping them is free and instant.
+
+**Trade-offs and risks:**
+
+- One example per skill may not cover every way the child got it wrong.
+- A blank might mean the child ran out of time, not that they don't know it.
+- No accounts yet, so refreshing the page loses the explanations.
+
+**Validation:** None yet.
+
+**Lesson:** Group by cause, not by symptom.
+
+---
+
+# ADR-022: One streamed AI call, text only
+
+- Date: 2026-10-31
+- Status: Accepted
+
+**Context:** A child shouldn't stare at a spinner, and many mistakes mean many tokens.
+
+**Options:** One call, wait for it all · One call per question · One call, streamed
+
+**Decision:** One call to `gpt-6.1-sol`, streamed. The reply is a list, and each explanation shows as soon as it's complete. Only text is sent, not the photo. It uses the same demo code check as marking.
+
+**Why:** Streaming makes the wait feel short, like ChatGPT. The reply has a fixed shape checked by Zod, and half a reply can't be checked, so the page waits for each item to finish, not for the whole list. The marking result already has the question, answers and skill, so the photo isn't needed.
+
+**Trade-offs and risks:**
+
+- Every real parent's click is a new call on the better model. The cheaper model can be tried later.
+- Streaming is harder to build than one plain reply.
+
+**Validation:** None yet.
+
+**Lesson:** Most tokens come from what the AI writes, not from how many calls you make.
+
+---
+
+# ADR-023: No pictures yet. Later, code draws them
+
+- Date: 2026-10-31
+- Status: Proposed
+
+**Context:** Maths ideas like fractions are easier to understand with a picture.
+
+**Options:** An image model draws it · The AI describes it and code draws it · No pictures for now
+
+**Decision:** Text only for now. Later, the AI picks from a few picture types (number line, place-value grid, fraction bar) and gives the numbers. My code draws them as SVG.
+
+**Why:** Image models guess what looks right. They can draw 5 parts when you asked for 4. Code draws the exact numbers, fast and free. Starting with text keeps this step small.
+
+**Trade-offs and risks:** Each picture type has to be built by hand. Some ideas won't fit any type.
+
+**Validation:** None yet.
+
+**Lesson:** For teaching maths, exact beats pretty. A wrong picture teaches the wrong thing.
+
+---
+
+# ADR-024: Saved explanations for the sample worksheet
+
+- Date: 2026-10-31
+- Status: Accepted
+
+**Context:** Visitors without the demo code can try a sample worksheet. They'll click **How Fawna can help** too.
+
+**Options:** Saved explanations · Call the AI live · Hide the button
+
+**Decision:** Generate the sample's explanations once, check them by hand, and save them next to the sample result (`lib/demo/sampleResult.ts`).
+
+**Why:** A live call would let anyone spend AI money without the code. Saved ones cost nothing and always look good. They also let the screen be built before the AI part is done.
+
+**Trade-offs and risks:** If the explanation shape changes, the saved ones must be made again.
+
+**Validation:** None yet.
+
+**Lesson:** A demo should show your best output, not gamble on a live one.
+
+---
+
+# ADR-025: Agree the shared shape first, then two agents in parallel
+
+- Date: 2026-10-31
+- Status: Accepted
+
+**Context:** I want several AI agents building at once without breaking each other's work.
+
+**Options:** One agent does everything · Agents split the work and each guesses the shared parts · Write the shared parts first, then split
+
+**Decision:**
+
+1. I write the shared parts myself: the explanation shape (Zod) and the grouping function.
+2. Then two agents, each in its own git worktree and branch:
+   - The AI part: explain route, instructions, streaming.
+   - The screen: skill-gap list, button, cards, using the saved sample explanations.
+3. I review and merge each one.
+
+**Why:** One side makes explanations and the other shows them. If each guessed the shape, they wouldn't fit. Writing the shape myself is also the part I most want to understand.
+
+**Trade-offs and risks:** The agents can't start until the shared parts are done. If the shape changes later, both sides change.
+
+**Validation:** None yet.
+
+**Lesson:** Split work where the parts only meet at one agreed shape, and agree on that shape first.
 
 ---
