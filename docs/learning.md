@@ -48,6 +48,65 @@ type MarkedQuestionType = {
 };
 ```
 
+## Zod words
+
+| Word | Means |
+|---|---|
+| `z.object({...})` | An object, with a rule for each field. |
+| `z.string()` | Any text. |
+| `z.literal("list")` | Exactly this value. `"List"` or `"lists"` fail. |
+| `z.enum([...])` | One value from a fixed list. |
+| `.describe("...")` | A note for the AI on what to put in the field. It doesn't check anything. |
+| `z.discriminatedUnion("source", [a, b])` | Shape `a` **or** shape `b`. One field (`source`) tells them apart. |
+
+## One thing, two shapes
+
+When a child gets a question wrong, the AI names the skill. It can do this in two ways:
+
+```ts
+// A skill from my list
+{ source: "list", skillId: "column-addition" }
+
+// A new skill the AI suggests, when nothing on my list fits
+{ source: "suggested", categoryId: "measurement", name: "Reading a bus timetable" }
+```
+
+The schema:
+
+```ts
+const listSkill = z.object({
+  source: z.literal("list"),
+  skillId: z.enum(SKILL_IDS), // one of my 116 ids, so the AI can't make one up
+});
+
+const suggestedSkill = z.object({
+  source: z.literal("suggested"),
+  categoryId: z.enum(CATEGORY_IDS),
+  name: z.string(), // any text, because the AI makes it up
+});
+
+const skill = z.discriminatedUnion("source", [listSkill, suggestedSkill]);
+```
+
+Questions use the same trick. There, `result` tells the four shapes apart.
+
+Once I check `source`, TypeScript knows which shape I have:
+
+```ts
+if (question.skill.source === "list") {
+  question.skill.skillId; // ✅ only the list shape has skillId
+} else {
+  question.skill.name;    // ✅ only the suggested shape has name
+}
+```
+
+Without the check, TypeScript won't let me use `skillId`. The skill might be the suggested shape, which doesn't have one.
+
+## Small and capital names
+
+- `markedQuestion` (small m) is the **Zod schema**. It checks data while the app runs.
+- `MarkedQuestion` (capital M) is the **TypeScript type** made from it with `z.infer`. It checks my code.
+
 ## How OpenAI's prompt cache works
 
 Every call sends these, in this order:

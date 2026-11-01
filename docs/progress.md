@@ -1,6 +1,6 @@
 # Fawna — Progress
 
-Last updated: 2026-10-30
+Last updated: 2026-11-01
 
 ## What Fawna does right now
 
@@ -35,6 +35,7 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 | Each question's result and skill on the page | `ResultsList.tsx` | Build only |
 | "Coming soon" card under the results: explain, check, practise (ADR-015) | `ResultsList.tsx` | Yes, with the sample in Chrome |
 | Shared counting for live and sample results | `lib/ai/summariseResult.ts` | Build only |
+| Group wrong and blank answers into skill gaps (ADR-021). Not used yet. | `lib/ai/groupSkillGaps.ts` | Yes, on the sample and a made-up sheet |
 | Logs show counts only, never a child's answers | `route.ts` | Yes |
 | Link previews for getfawna.com | `app/layout.tsx` | Yes, tags in the built page |
 | Live on getfawna.com | — | Yes |
@@ -71,12 +72,24 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 - **Change one thing at a time** when testing the AI, so you know what made the difference.
 - **A wrong answer is a clue.** If the digits stayed but moved, it's a place-value slip. If the digits changed, look for a fact or a misconception.
 
+## Next: explanations (ADR-020 to ADR-025)
+
+- [x] Plan it: decisions and words agreed
+- [x] Group mistakes into skill gaps (`groupSkillGaps`)
+- [ ] Write the spec with `/to-spec`
+- [ ] Explanation schema (Zod), with only this sheet's keys allowed
+- [ ] Split the work into tickets with `/to-tickets`
+- [ ] Agent 1: explain route, instructions, streaming
+- [ ] Agent 2: skill-gap list, button and explanation cards
+- [ ] Saved explanations for the sample worksheet
+- [ ] Later: the AI picks the best example question, pictures drawn by code, check question
+
 ## Not done yet ⏳
 
 - [x] **Switch on the AI call** and send the result back to the page
 - [x] Check the AI can read the small print (it read every question on entry 1)
 - [x] Better skill picks: `useWhen` hints sent to the AI, Sol rerun on entry 1 with `response.usage` logged (0/2 → 2/2, ADR-017)
-- [ ] **Next:** add a "read the digits of the wrong answer" rule to the instructions, then test on a new worksheet
+- [ ] Add a "read the digits of the wrong answer" rule to the instructions, then test on a new worksheet
 - [ ] Grow the golden set to 15–20 real mistakes (1 worksheet so far)
 - [x] Show each question's result on the page, not just the score
 - [ ] Get the school year from the family account, not a fixed value
