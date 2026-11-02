@@ -634,3 +634,42 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 **Lesson:** Split work where the parts only meet at one agreed shape, and agree on that shape first.
 
 ---
+
+# ADR-026: Build the explanation schema for each sheet, and remove fact gaps before it
+
+- Date: 2026-11-02
+- Status: Accepted
+
+**Context:** The AI's explanation must use one of this sheet's skill gap keys. Each sheet has different keys. Fact gaps don't get an explanation (ADR-021). Sometimes nothing is left to explain.
+
+**Options:**
+
+- Where to build the schema: once at the top of the file · in a function, on each request
+- Where to remove fact gaps: inside `buildExplanationSchema` · in the explain step, before it
+- Nothing left to explain: let the key be `null` · don't call the AI
+
+**Decision:**
+
+- `buildExplanationSchema(skillGaps)` builds a fresh schema on each request. The key is `z.enum` of this sheet's keys only.
+- The explain step removes fact gaps **once**. It passes the same list to the schema and to the message.
+- If no skill gaps are left, the explain step stops. No schema, no AI call.
+- `buildExplanationSchema` throws if it gets an empty list. This is a safety net, not the main check.
+- Suggested skills (`kind: null`) are kept.
+
+**Why:**
+
+- A schema at the top of the file is built before any worksheet exists, so it can't know the keys.
+- The schema and the message must list the same skill gaps. Filtering in two places lets them disagree. Then the AI is asked to explain a gap whose key the schema won't accept.
+- `buildExplanationSchema` only builds rules. Deciding what deserves an explanation is a product rule, so it belongs in the explain step.
+- A `null` key would be a card for no skill gap. The page can't show it, and it costs tokens.
+
+**Trade-offs and risks:**
+
+- The explain step must remember to filter and check. The safety net catches a missed empty check, but not a missed fact filter.
+- Flashcards for fact gaps are a separate idea (#9).
+
+**Validation:** Checked by hand with the sample sheet: a key on the sheet passes, a key not on the sheet fails. Tests still to write (#2).
+
+**Lesson:** Decide something in one place, then pass the result to everyone who needs it.
+
+---
