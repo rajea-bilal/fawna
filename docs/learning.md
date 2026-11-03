@@ -56,6 +56,7 @@ type MarkedQuestionType = {
 | `z.string()` | Any text. |
 | `z.literal("list")` | Exactly this value. `"List"` or `"lists"` fail. |
 | `z.enum([...])` | One value from a fixed list. |
+| `z.array(...)` | A list. Every item in it follows the rule inside. |
 | `.describe("...")` | A note for the AI on what to put in the field. It doesn't check anything. |
 | `z.discriminatedUnion("source", [a, b])` | Shape `a` **or** shape `b`. One field (`source`) tells them apart. |
 
@@ -102,6 +103,91 @@ if (question.skill.source === "list") {
 
 Without the check, TypeScript won't let me use `skillId`. The skill might be the suggested shape, which doesn't have one.
 
+## `z.enum` vs `z.array`
+
+They sound alike but do different jobs.
+
+- `z.enum(list)` means **one** value, picked from the list.
+- `z.array(rule)` means **many** values. Each one follows the rule.
+
+```ts
+z.enum(["red", "blue"])
+// ✅ "red"
+// ❌ "green"           (not on the list)
+// ❌ ["red"]           (a list, not one value)
+
+z.array(z.string())
+// ✅ ["a", "b", "c"]
+// ✅ []                (an empty list is still a list)
+// ❌ "a"               (one value, not a list)
+```
+
+I can put one inside the other. `z.array(z.enum(["red", "blue"]))` means a list where every item is red or blue.
+
+A plain list like `["red", "blue"]` is **not** a rule. It's just data. `z.enum` turns it into a rule. Think of a guest list and a bouncer. The list is just paper. The bouncer uses it to say yes or no.
+
+## A schema for data that hasn't arrived yet
+
+A schema isn't data. It's a set of **rules** the data must follow. So I can write it before the data exists, the same way I can write party rules before any guests turn up.
+
+Most schemas are the same for every request. I write them once, at the top of the file. The marking schema is like this: every worksheet uses the same 116 skill ids.
+
+Sometimes the rules depend on the request. In Fawna, each worksheet has different skill gaps. The AI's explanations must only use **this sheet's** keys.
+
+One sheet might give:
+
+```
+["dividing-by-10-100-1000", "percentage-facts"]
+```
+
+The next sheet might give:
+
+```
+["column-addition", "suggested-1"]
+```
+
+A schema at the top of the file is built once, when the file loads. At that moment there's no worksheet yet, so it can't know the keys. Once a schema is built, I can't change it either.
+
+The fix is to **build the schema inside a function**:
+
+- A function only runs when I call it.
+- I call it during each request, once I have that sheet's skill gaps.
+- It builds a fresh schema from them and returns it.
+
+A schema is just a value, like a number or an object, so a function can return it.
+
+```ts
+export function buildExplanationSchema(skillGaps: SkillGap[]) {
+  // 1. Pull out this sheet's keys
+  const gapKeys = skillGaps.map((gap) => gap.key);
+
+  // 2. The shape of ONE explanation
+  const explanation = z.object({
+    key: z.enum(gapKeys), // one of THIS sheet's keys, nothing else
+    title: z.string(),
+    whatWentWrong: z.string(),
+    steps: z.array(z.string()),
+    parentTip: z.string(),
+  });
+
+  // 3. The whole reply: MANY explanations.
+  //    OpenAI needs an object at the top, not a bare list.
+  return z.object({
+    explanations: z.array(explanation),
+  });
+}
+```
+
+How it's used on each request:
+
+1. Code groups the mistakes into skill gaps.
+2. `buildExplanationSchema(skillGaps)` builds the rules for this sheet.
+3. The schema goes to OpenAI with the request. It tells the AI what shape to reply in.
+4. The facts (question, child's answer, right answer) go in the message, not the schema. The schema is the empty form. The message is the information to fill it in with.
+5. When the reply comes back, the same schema checks it. A key that isn't on this sheet fails.
+
+The rule of thumb: if the rules are the same every time, write the schema at the top of the file. If they depend on the request, build it in a function.
+
 ## Small and capital names
 
 - `markedQuestion` (small m) is the **Zod schema**. It checks data while the app runs.
@@ -123,6 +209,44 @@ Three things to know:
 - **Order matters.** The parts that stay the same go first, and the photo goes last. My code already does this. If the photo came first, nothing would ever match.
 - **Cached isn't free.** It's cheaper, but I still pay something.
 - **The cache doesn't last long.** If no one uses Fawna for a while, the next call starts again with nothing cached.
+
+## Vitest
+
+- A tool that runs tests.
+- A test is code that checks my other code still does the right thing.
+- It finds every file ending in `.test.ts` and runs it.
+- It tells me which tests passed and which failed.
+
+`npm test` runs all tests once and stops. (`vitest` on its own keeps running and tests again each time I save.)
+
+### What a test looks like
+
+```ts
+describe("groupSkillGaps", () => {
+  it("gives an empty list for an empty result", () => {
+    expect(groupSkillGaps({ questions: [] })).toEqual([]);
+  });
+});
+```
+
+| Word | Means |
+|---|---|
+| `describe("...", ...)` | A group of tests about one thing. |
+| `it("...", ...)` | One test. The text reads like a sentence: "it gives an empty list…". |
+| `expect(x)` | "I expect x to be…". This is the check. |
+| `.toBe(y)` | x is exactly y. For simple values like text or numbers. |
+| `.toEqual(y)` | x has the same contents as y. For lists and objects. |
+| `.toHaveLength(n)` | x has n items. |
+
+### How I write my tests
+
+- **Put data in, check what comes out.** Don't test how the code works inside. Then I can rewrite the inside, and the tests still pass if the answer is the same.
+- **Use small helpers.** `wrong("2", "rounding")` makes a whole wrong question. The test only shows what matters.
+- **One idea per test.** When a test fails, its name tells me what broke.
+
+### A failing test is good news
+
+It means the test caught a change. Read the message: it shows what I expected and what I got.
 
 ## Words we use in Fawna
 
