@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExplanationSchema } from "./explanationSchema";
+import { buildExplanationSchema, StreamMessage } from "./explanationSchema";
 import type { SkillGap } from "./groupSkillGaps";
 
 // Small helpers so each test only shows the parts it cares about.
@@ -49,5 +49,44 @@ describe("buildExplanationSchema", () => {
 
   it("throws when there are no skill gaps to explain", () => {
     expect(() => buildExplanationSchema([])).toThrow("No skill gaps to explain");
+  });
+});
+
+describe("StreamMessage", () => {
+  // The parts code fills in from the skill gap
+  const questionParts = {
+    key: "dividing-by-10-100-1000",
+    question: "66 ÷ 1000 =",
+    childAnswer: "0.66",
+    correctAnswer: "0.066",
+  };
+
+  it("accepts an explained card", () => {
+    const message = {
+      type: "card",
+      card: { status: "explained", ...questionParts, ...card("dividing-by-10-100-1000") },
+    };
+
+    expect(StreamMessage.safeParse(message).success).toBe(true);
+  });
+
+  it("accepts a failed card, which has no AI parts", () => {
+    const message = { type: "card", card: { status: "failed", ...questionParts } };
+
+    expect(StreamMessage.safeParse(message).success).toBe(true);
+  });
+
+  it("rejects an explained card with no AI parts", () => {
+    const message = { type: "card", card: { status: "explained", ...questionParts } };
+
+    expect(StreamMessage.safeParse(message).success).toBe(false);
+  });
+
+  it("accepts done", () => {
+    expect(StreamMessage.safeParse({ type: "done" }).success).toBe(true);
+  });
+
+  it("rejects a type it doesn't know", () => {
+    expect(StreamMessage.safeParse({ type: "error" }).success).toBe(false);
   });
 });

@@ -107,6 +107,49 @@ parentTip      ← AI
 
 `status` tells the page which card it has.
 
+## The explain step, step by step
+
+```
+1. Server → AI      "Explain these skill gaps. Reply in this shape."
+                    Fact gaps are removed first. None left? Stop, no AI call.
+
+2. AI → Server      Writes the explanations, streamed bit by bit.
+                    As soon as ONE explanation is complete:
+                    ✔ CHECK 1: the server checks it against buildExplanationSchema.
+
+3. Server           Builds a card: the AI's parts + the question and answers
+                    from the skill gap. Matched by key, never by title.
+
+4. Server → Page    Sends { type: "card", card: {...} }
+                    ✔ CHECK 2: the page checks it against StreamMessage.
+
+5.                  Repeat 2–4 for each skill gap.
+
+6. Server → Page    Sends { type: "done" }
+```
+
+## The stream rules
+
+The server sends the page **one JSON message per line**. Each message has a `type`.
+
+```
+{ "type": "card", "card": { "status": "explained", "key": "...", ... } }
+{ "type": "card", "card": { "status": "failed", "key": "...", ... } }
+{ "type": "done" }
+```
+
+| What happens | Server sends | Page does |
+|---|---|---|
+| An explanation is ready | `card` with `status: "explained"` | Show it |
+| The AI skipped a skill gap, or its explanation failed the check | `card` with `status: "failed"` | Show "Couldn't explain this one" |
+| The AI call fails halfway | A `failed` card for every skill gap not sent yet, then `done` | Show them |
+| Every skill gap has a card | `done` | Stop the loading dots |
+| The stream ends with no `done` | Nothing (it broke) | Show "Something went wrong" |
+
+Every skill gap gets exactly one card. Nothing disappears silently.
+
+Shapes: `ExplanationCard` and `StreamMessage` in `lib/ai/explanationSchema.ts`.
+
 ## Easy to mix up
 
 | Word | Lives on | Means |
@@ -132,7 +175,7 @@ parentTip      ← AI
 | `lib/ai/mathSkills.ts` | Our fixed skill list |
 | `lib/ai/summariseResult.ts` | Counts the score |
 | `lib/ai/groupSkillGaps.ts` | Groups mistakes into skill gaps |
-| `lib/ai/explanationSchema.ts` | The explain AI's reply shape, and the page cards |
+| `lib/ai/explanationSchema.ts` | The explain AI's reply shape, the page cards, and the stream messages |
 | `lib/demo/sampleResult.ts` | A saved result for "Try a sample" |
 
 ## Where to read more

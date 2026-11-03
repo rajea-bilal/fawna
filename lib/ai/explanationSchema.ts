@@ -28,7 +28,7 @@ export function buildExplanationSchema(skillGaps: SkillGap[]) {
 
   const gapKeys = skillGaps.map((gap) => gap.key);
 
-  // the shape of one card
+  // what the ai writes for one skill gap
   const aiExplanation = z.object({
     key: z.enum(gapKeys),
     ...aiFields,
@@ -60,3 +60,24 @@ export const ExplanationCard = z.discriminatedUnion("status", [
 
 // make a typescript type from the zod rule
 export type ExplanationCard = z.infer<typeof ExplanationCard>;
+
+// The stream: the server sends the page one JSON message per line.
+// A card for each skill gap (explained or failed), then { type: "done" }.
+// No "done" at the end means the stream broke. Full rules: docs/how-fawna-works.md
+const cardMessage = z.object({
+  type: z.literal("card"),
+  card: ExplanationCard,
+});
+
+const doneMessage = z.object({
+  type: z.literal("done"),
+});
+
+// the rule - checks data while the app runs
+export const StreamMessage = z.discriminatedUnion("type", [
+  cardMessage,
+  doneMessage,
+]);
+
+// typescript type from the zod rule on stream message
+export type StreamMessage = z.infer<typeof StreamMessage>;
