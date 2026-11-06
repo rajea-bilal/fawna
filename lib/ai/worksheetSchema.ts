@@ -74,7 +74,7 @@ const blankQuestion = z.object({
 });
 
 // Each question is one of the four shapes. `result` says which one.
-const markedQuestion = z.discriminatedUnion("result", [
+export const MarkedQuestion = z.discriminatedUnion("result", [
   correctQuestion,
   incorrectQuestion,
   unreadableQuestion,
@@ -83,8 +83,8 @@ const markedQuestion = z.discriminatedUnion("result", [
 
 // The full reply. OpenAI needs an object at the top, not a bare list.
 export const WorksheetResult = z.object({
-  questions: z.array(markedQuestion),
+  questions: z.array(MarkedQuestion),
 });
 
 export type WorksheetResult = z.infer<typeof WorksheetResult>;
-export type MarkedQuestion = z.infer<typeof markedQuestion>;
+export type MarkedQuestion = z.infer<typeof MarkedQuestion>;

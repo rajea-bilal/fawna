@@ -22,10 +22,10 @@ One glance at how data moves through the app.
  Parent clicks "How Fawna can help"
          │
          ▼
- ④ Explain AI writes explanations    🚧  lib/ai/explanationSchema.ts (shape)
+ ④ Explain AI writes explanations    ✅  lib/ai/explainSkillGaps.ts
          │   one AI explanation per skill gap
          ▼
- ⑤ Code builds the page cards        🚧
+ ⑤ Code builds the page cards        ✅  lib/ai/explainSkillGaps.ts
          │   one card per skill gap: explained or failed
          ▼
  The page shows the cards, one by one
@@ -170,11 +170,14 @@ Shapes: `ExplanationCard` and `StreamMessage` in `lib/ai/explanationSchema.ts`.
 | `app/components/ImageUpload.tsx` | Shrinks the photo, sends it, shows the result |
 | `app/components/ResultsList.tsx` | Shows the score and each question |
 | `app/api/analyze/route.ts` | The server endpoint for marking |
+| `app/api/explain/route.ts` | The server endpoint for explaining. Streams the cards |
 | `lib/ai/analyzeWorksheet.ts` | Calls the marking AI |
 | `lib/ai/worksheetSchema.ts` | The marking AI's reply shape |
 | `lib/ai/mathSkills.ts` | Our fixed skill list |
 | `lib/ai/summariseResult.ts` | Counts the score |
 | `lib/ai/groupSkillGaps.ts` | Groups mistakes into skill gaps |
+| `lib/ai/explainSkillGaps.ts` | The explain step: skill gaps in, cards out. The AI call is passed in |
+| `lib/ai/openAiExplainer.ts` | The real AI call for explaining, streamed |
 | `lib/ai/explanationSchema.ts` | The explain AI's reply shape, the page cards, and the stream messages |
 | `lib/demo/sampleResult.ts` | A saved result for "Try a sample" |
 
