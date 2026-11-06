@@ -1,6 +1,6 @@
 # Fawna — Progress
 
-Last updated: 2026-11-01
+Last updated: 2026-11-06
 
 ## What Fawna does right now
 
@@ -11,7 +11,7 @@ Last updated: 2026-11-01
 5. The server checks it again, **shrinks it again** with sharp (a safety net), and turns it into base64.
 6. The server sends the photo and the school year (fixed at 5 for now) to OpenAI (`gpt-6.1-sol`).
 7. The AI marks every question: correct, incorrect, blank or unreadable. Wrong and blank answers get a skill from our list.
-8. The server counts the results. The page shows the score, e.g. "8 correct · 2 to work on", and every question with its result and skill.
+8. The server counts the results and groups wrong and blank answers into **skill gaps**. The page shows the score, e.g. "8 correct · 2 to work on", the skill-gap list, and every question with its result and skill.
 
 Without a code, visitors can click **Try a sample worksheet** to see a saved result. No AI call.
 
@@ -35,7 +35,9 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 | Each question's result and skill on the page | `ResultsList.tsx` | Build only |
 | "Coming soon" card under the results: explain, check, practise (ADR-015) | `ResultsList.tsx` | Yes, with the sample in Chrome |
 | Shared counting for live and sample results | `lib/ai/summariseResult.ts` | Build only |
-| Group wrong and blank answers into skill gaps (ADR-021). Not used yet. | `lib/ai/groupSkillGaps.ts` | Yes, on the sample and a made-up sheet |
+| Group wrong and blank answers into skill gaps (ADR-021), straight after marking, for live and sample results | `lib/ai/groupSkillGaps.ts`, `summariseResult.ts` | Yes, Vitest |
+| Skill-gap list under the score: name, number of questions, "learn by heart" for fact skills | `ResultsList.tsx` | Yes, with the sample in Chrome |
+| Suggested skills shown with no "(suggested)" tag (the data still knows) | `ResultsList.tsx` | Build only |
 | Logs show counts only, never a child's answers | `route.ts` | Yes |
 | Link previews for getfawna.com | `app/layout.tsx` | Yes, tags in the built page |
 | Live on getfawna.com | — | Yes |
@@ -76,11 +78,12 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 
 - [x] Plan it: decisions and words agreed
 - [x] Group mistakes into skill gaps (`groupSkillGaps`)
-- [ ] Write the spec with `/to-spec`
-- [ ] Explanation schema (Zod), with only this sheet's keys allowed
-- [ ] Split the work into tickets with `/to-tickets`
+- [x] Write the spec with `/to-spec` (#1)
+- [x] Explanation schema (Zod), with only this sheet's keys allowed (#2)
+- [x] Split the work into tickets with `/to-tickets`
 - [ ] Agent 1: explain route, instructions, streaming
-- [ ] Agent 2: skill-gap list, button and explanation cards
+- [x] Agent 2: skill-gap list (#3)
+- [ ] Agent 2: button and explanation cards (#4)
 - [ ] Saved explanations for the sample worksheet
 - [ ] Later: the AI picks the best example question, pictures drawn by code, check question
 
@@ -105,7 +108,6 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 
 - Parents log in (Supabase), replacing the demo code
 - iPhone HEIC photos uploaded from a Mac are rejected. Decide what to do.
-- Automated tests
 
 ## Plan for later: English worksheets
 

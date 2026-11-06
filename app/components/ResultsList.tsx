@@ -22,7 +22,7 @@ function skillName(question: MarkedQuestion): string | null {
   const { skill } = question;
   return skill.source === "list"
     ? (SKILL_NAMES.get(skill.skillId) ?? skill.skillId)
-    : `${skill.name} (suggested)`;
+    : skill.name;
 }
 
 // A teacher's mark in the margin: olive tick, terracotta cross, ink dash.
@@ -45,7 +45,7 @@ function Mark({ result }: { result: MarkedQuestion["result"] }) {
 }
 
 // What the child needs help with, one row per skill gap, in sheet order (ADR-021).
-// Fact skills get no explanation, so they're marked "needs practice" instead.
+// Fact skills get no explanation (ADR-015), so they're marked "learn by heart" instead.
 function SkillGapList({ skillGaps }: { skillGaps: SkillGap[] }) {
   return (
     <section aria-labelledby="skill-gaps-heading" className="mt-6">
@@ -62,7 +62,7 @@ function SkillGapList({ skillGaps }: { skillGaps: SkillGap[] }) {
             <span className="flex items-baseline gap-3 text-sm text-ink/70">
               {gap.kind === "fact" && (
                 <span className="rounded-full bg-ink/8 px-2.5 py-0.5 font-semibold text-ink/70">
-                  needs practice
+                  learn by heart
                 </span>
               )}
               <span className="tabular-nums">
