@@ -248,6 +248,31 @@ describe("groupSkillGaps", () => {
 
 It means the test caught a change. Read the message: it shows what I expected and what I got.
 
+## Zod vs evals
+
+An AI answer can have a perfect shape and still be wrong. Zod can't tell. An eval can.
+
+| | Zod | Eval |
+|---|---|---|
+| Checks | The **shape** | The **quality** |
+| Asks | "Is `steps` a list of text?" | "Are the steps actually right?" |
+| Runs | On every real request | When I test, or change the prompt or model |
+| Example | Rejects a missing `title` | Notices the AI said 66 ÷ 1000 = 0.66 |
+
+An **eval** is:
+
+1. Test inputs where I already know the right answer.
+2. Run them through the AI.
+3. Score the answers: by code, by me, or by another AI (a "grader").
+
+My golden set (`docs/golden-set.md`) is an eval. ADR-011 used it to choose the model.
+
+**Three checks in Fawna:**
+
+- **Vitest** checks my code.
+- **Zod** checks the AI's shape.
+- **The golden set** checks the AI's quality.
+
 ## Words we use in Fawna
 
 | Word | Means | Not to be confused with |
