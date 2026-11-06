@@ -1,6 +1,7 @@
 import { MATH_CATEGORIES } from "@/lib/ai/mathSkills";
 import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
 import type { WorksheetSummary } from "@/lib/ai/summariseResult";
+import type { SkillGap } from "@/lib/ai/groupSkillGaps";
 
 // Skill id → readable name, built once from the fixed skill list.
 const SKILL_NAMES = new Map(
@@ -21,7 +22,7 @@ function skillName(question: MarkedQuestion): string | null {
   const { skill } = question;
   return skill.source === "list"
     ? (SKILL_NAMES.get(skill.skillId) ?? skill.skillId)
-    : `${skill.name} (suggested)`;
+    : skill.name;
 }
 
 // A teacher's mark in the margin: olive tick, terracotta cross, ink dash.
@@ -40,6 +41,38 @@ function Mark({ result }: { result: MarkedQuestion["result"] }) {
     >
       {symbol}
     </span>
+  );
+}
+
+// What the child needs help with, one row per skill gap, in sheet order (ADR-021).
+// Fact skills get no explanation (ADR-015), so they're marked "learn by heart" instead.
+function SkillGapList({ skillGaps }: { skillGaps: SkillGap[] }) {
+  return (
+    <section aria-labelledby="skill-gaps-heading" className="mt-6">
+      <h3 id="skill-gaps-heading" className="text-sm font-semibold tracking-wide text-rust uppercase">
+        Skill gaps
+      </h3>
+      <ul className="mt-3 space-y-2">
+        {skillGaps.map((gap) => (
+          <li
+            key={gap.key}
+            className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-lg bg-peach/30 px-4 py-2.5"
+          >
+            <span className="font-semibold">{gap.name}</span>
+            <span className="flex items-baseline gap-3 text-sm text-ink/70">
+              {gap.kind === "fact" && (
+                <span className="rounded-full bg-ink/8 px-2.5 py-0.5 font-semibold text-ink/70">
+                  learn by heart
+                </span>
+              )}
+              <span className="tabular-nums">
+                {gap.questions.length} {gap.questions.length === 1 ? "question" : "questions"}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -121,6 +154,8 @@ export default function ResultsList({ summary }: { summary: WorksheetSummary }) 
               </a>
             )}
           </div>
+
+          {summary.skillGaps.length > 0 && <SkillGapList skillGaps={summary.skillGaps} />}
 
           <ol className="mt-8 divide-y divide-ink/10 border-t border-ink/10">
             {summary.questions.map((question, index) => {

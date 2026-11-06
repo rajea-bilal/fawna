@@ -1,4 +1,5 @@
 import type { MarkedQuestion, WorksheetResult } from "./worksheetSchema";
+import { groupSkillGaps, type SkillGap } from "./groupSkillGaps";
 
 // What the page shows for one marked worksheet.
 // Used by the live route and by the sample, so both read the same way.
@@ -9,6 +10,7 @@ export interface WorksheetSummary {
   blank: number;
   unreadable: number;
   questions: MarkedQuestion[];
+  skillGaps: SkillGap[];
 }
 
 // Code counts, not the AI (ADR-007)
@@ -27,5 +29,7 @@ export function summariseResult(result: WorksheetResult): WorksheetSummary {
     blank,
     unreadable,
     questions: result.questions,
+    // Grouped straight after marking, so the list is ready before any click (ADR-021)
+    skillGaps: groupSkillGaps(result),
   };
 }
