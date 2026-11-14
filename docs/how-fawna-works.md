@@ -142,6 +142,7 @@ The server sends the page **one JSON message per line**. Each message has a `typ
 |---|---|---|
 | An explanation is ready | `card` with `status: "explained"` | Show it |
 | The AI skipped a skill gap, or its explanation failed the check | `card` with `status: "failed"` | Show "Couldn't explain this one" |
+| The AI call fails before any card | No stream. An error status instead (503, 504 or 502, ADR-014) | Show "Something went wrong" |
 | The AI call fails halfway | A `failed` card for every skill gap not sent yet, then `done` | Show them |
 | Every skill gap has a card | `done` | Stop the loading dots |
 | The stream ends with no `done` | Nothing (it broke) | Show "Something went wrong" |

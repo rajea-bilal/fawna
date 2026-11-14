@@ -82,9 +82,11 @@ export async function* explainSkillGaps(
     for await (const itemText of completeExplanations(reply)) {
       const explanation = itemSchema.safeParse(parseJson(itemText));
       if (!explanation.success) {
-        // Only the paths: the values could hold a child's answers (logs show counts only)
+        // Skip just this one. Its skill gap gets a failed card below, the rest still show.
+        // Only the paths are logged: the values could hold a child's answers.
         const paths = explanation.error.issues.map((issue) => issue.path.join("."));
-        throw new ExplainAiFault(`An explanation failed the check at: ${paths.join(", ")}`);
+        console.error(`[explain] skipped an explanation that failed the check at: ${paths.join(", ")}`);
+        continue;
       }
       const { data } = explanation;
       if (sentKeys.has(data.key)) continue; // one card per skill gap, keep the first

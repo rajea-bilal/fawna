@@ -156,17 +156,9 @@ describe("explainSkillGaps", () => {
     const statuses = (messages: StreamMessage[]) =>
       messages.map((m) => (m.type === "card" ? `${m.card.key}:${m.card.status}` : m.type));
 
-    it("throws when the first explanation fails Zod, so the endpoint can send a 5xx", async () => {
-      const noSteps = withoutSteps("rounding");
-      const { ai } = fakeAi({ explanations: [noSteps] });
-
-      await expect(collect(explainSkillGaps([gap("rounding")], ai))).rejects.toThrow(ExplainAiFault);
-    });
-
-    it("after a card is sent, a Zod failure fails every skill gap not sent yet, then sends done", async () => {
-      const noSteps = withoutSteps("rounding");
+    it("fails only the explanation that fails Zod, and still sends the good ones", async () => {
       const { ai } = fakeAi({
-        explanations: [explanation("column-addition"), noSteps, explanation("place-value")],
+        explanations: [explanation("column-addition"), withoutSteps("rounding"), explanation("place-value")],
       });
 
       const messages = await collect(
@@ -175,10 +167,18 @@ describe("explainSkillGaps", () => {
 
       expect(statuses(messages)).toEqual([
         "column-addition:explained",
+        "place-value:explained",
         "rounding:failed",
-        "place-value:failed",
         "done",
       ]);
+    });
+
+    it("still sends the rest when the first explanation fails Zod", async () => {
+      const { ai } = fakeAi({ explanations: [withoutSteps("rounding"), explanation("place-value")] });
+
+      const messages = await collect(explainSkillGaps([gap("rounding"), gap("place-value")], ai));
+
+      expect(statuses(messages)).toEqual(["place-value:explained", "rounding:failed", "done"]);
     });
 
     it("throws when the AI call fails before any card is sent", async () => {
