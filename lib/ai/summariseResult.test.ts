@@ -9,6 +9,8 @@ describe("summariseResult", () => {
     expect(summary.skillGaps.map((gap) => [gap.key, gap.questions.length])).toEqual([
       ["dividing-by-10-100-1000", 1],
       ["percentage-facts", 1],
+      ["rounding-decimals", 1],
+      ["fractions-to-decimals", 1],
     ]);
   });
 

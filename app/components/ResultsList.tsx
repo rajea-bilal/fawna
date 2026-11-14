@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { MATH_CATEGORIES } from "@/lib/ai/mathSkills";
+import type { ExplanationCard } from "@/lib/ai/explanationSchema";
 import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
 import type { WorksheetSummary } from "@/lib/ai/summariseResult";
 import type { SkillGap } from "@/lib/ai/groupSkillGaps";
@@ -76,6 +80,147 @@ function SkillGapList({ skillGaps }: { skillGaps: SkillGap[] }) {
   );
 }
 
+
+// One card per explained skill gap, for the child to read with the parent (issue #4).
+// Cards are matched to skill gaps by key, never by title.
+function ExplanationCards({
+  cards,
+  skillGaps,
+}: {
+  cards: ExplanationCard[];
+  skillGaps: SkillGap[];
+}) {
+  return (
+    <ul className="grid gap-6">
+      {cards.map((card, index) => {
+        const gap = skillGaps.find((g) => g.key === card.key);
+        return (
+          <li
+            key={card.key}
+            // Same short stagger as the question rows, so cards arrive one by one.
+            style={{ animationDelay: `${Math.min(index, 10) * 120}ms` }}
+            className="motion-safe:animate-rise motion-reduce:animate-fade"
+          >
+            {card.status === "explained" ? (
+              <ExplainedCard card={card} questionNumber={gap?.exampleQuestion.number} />
+            ) : (
+              <FailedCard
+                card={card}
+                skillName={gap?.name}
+                questionNumber={gap?.exampleQuestion.number}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+type ExplainedCardData = Extract<ExplanationCard, { status: "explained" }>;
+type FailedCardData = Extract<ExplanationCard, { status: "failed" }>;
+
+// The child's question, their answer next to the right one.
+// A blank shows "Left blank", never "you wrote…" (user story 20).
+function ExampleQuestion({
+  card,
+  questionNumber,
+}: {
+  card: ExplanationCard;
+  questionNumber?: string;
+}) {
+  const isBlank = card.childAnswer.trim() === "";
+  return (
+    <div className="mt-4 rounded-lg bg-linen/70 px-4 py-3">
+      <p className="font-semibold">
+        {questionNumber && (
+          <span className="text-ink/50 tabular-nums">Q{questionNumber} </span>
+        )}
+        {card.question}
+      </p>
+      <p className="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+        {isBlank ? (
+          <span className="text-sm text-ink/70">Left blank</span>
+        ) : (
+          <span className="text-sm text-ink/70">
+            You wrote{" "}
+            <span className="font-hand text-xl text-terracotta tabular-nums line-through decoration-2">
+              {card.childAnswer}
+            </span>
+          </span>
+        )}
+        <span className="text-sm text-ink/70">
+          Right answer{" "}
+          <span className="font-hand text-xl text-olive tabular-nums">{card.correctAnswer}</span>
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function ExplainedCard({
+  card,
+  questionNumber,
+}: {
+  card: ExplainedCardData;
+  questionNumber?: string;
+}) {
+  return (
+    <article className="paper-shadow">
+      <div className="stamp-edge bg-paper p-6 sm:p-9">
+        <h4 className="font-display text-2xl leading-tight font-medium text-balance">
+          {card.title}
+        </h4>
+        <ExampleQuestion card={card} questionNumber={questionNumber} />
+
+        <ol className="mt-5 space-y-3">
+          {card.steps.map((step, index) => (
+            <li key={index} className="flex gap-3">
+              <span
+                aria-hidden
+                className="grid size-7 shrink-0 place-items-center rounded-full bg-peach/50 text-sm font-bold text-rust tabular-nums"
+              >
+                {index + 1}
+              </span>
+              <p className="pt-0.5 text-lg leading-snug">{step}</p>
+            </li>
+          ))}
+        </ol>
+
+        <p className="mt-5 rounded-lg bg-terracotta/10 px-4 py-3 leading-snug">
+          <span className="font-semibold text-terracotta">What went wrong: </span>
+          {card.whatWentWrong}
+        </p>
+
+        {/* For the parent, not the child: set apart and smaller. */}
+        <aside className="mt-6 border-t-2 border-dashed border-ink/15 pt-4 text-sm leading-relaxed text-ink/75">
+          <p className="text-xs font-semibold tracking-wide text-rust uppercase">Tip for you</p>
+          <p className="mt-1">{card.parentTip}</p>
+        </aside>
+      </div>
+    </article>
+  );
+}
+
+// The AI skipped this skill gap, or its explanation failed the check.
+function FailedCard({
+  card,
+  skillName,
+  questionNumber,
+}: {
+  card: FailedCardData;
+  skillName?: string;
+  questionNumber?: string;
+}) {
+  return (
+    <article className="rounded-2xl border-2 border-dashed border-ink/20 p-6 sm:p-9">
+      <h4 className="font-display text-xl font-medium">Couldn’t explain this one</h4>
+      {skillName && <p className="mt-1 text-sm text-ink/70">{skillName}</p>}
+      <ExampleQuestion card={card} questionNumber={questionNumber} />
+    </article>
+  );
+}
+
 const NEXT_STEPS = [
   {
     title: "Explain it.",
@@ -114,9 +259,38 @@ function NextSteps({ skill }: { skill: string }) {
   );
 }
 
-export default function ResultsList({ summary }: { summary: WorksheetSummary }) {
+export default function ResultsList({
+  summary,
+  explanations,
+}: {
+  summary: WorksheetSummary;
+  // Saved cards for the sample (ADR-024). Live results don't pass any yet,
+  // so they keep the "coming soon" card until the explain step is connected.
+  explanations?: ExplanationCard[];
+}) {
   // First skill to work on, if any. Only one is named to keep the card short.
   const firstSkill = summary.questions.map(skillName).find((name) => name !== null);
+  const [showCards, setShowCards] = useState(false);
+  const cardsRef = useRef<HTMLElement>(null);
+
+  // The cards land below the marks, so bring them into view once they exist.
+  // Reduced motion: jump, no glide.
+  const scrollToCards = () => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    cardsRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  };
+  useEffect(() => {
+    if (showCards) scrollToCards();
+  }, [showCards]);
+
+  // Sample only: show the saved cards. No request is sent.
+  const handleHelp = () => {
+    if (showCards) scrollToCards();
+    else setShowCards(true);
+  };
+
+  const helpStyle =
+    "rounded-full border-2 border-rust/30 px-3.5 py-1 text-sm font-semibold text-rust transition-colors hover:border-rust hover:bg-peach/40 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-espresso";
 
   // Only the counts that happened, so "0 couldn't read" doesn't add noise.
   const counts = [
@@ -145,13 +319,24 @@ export default function ResultsList({ summary }: { summary: WorksheetSummary }) 
               ))}
             </ul>
             {/* Outside the aria-hidden list, so screen readers can reach the link. */}
-            {firstSkill && (
-              <a
-                href="#next-steps"
-                className="rounded-full border-2 border-rust/30 px-3.5 py-1 text-sm font-semibold text-rust transition-colors hover:border-rust hover:bg-peach/40 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-espresso"
-              >
-                How Fawna can help <span aria-hidden>↓</span>
-              </a>
+            {explanations ? (
+              explanations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleHelp}
+                  aria-expanded={showCards}
+                  aria-controls="explanations"
+                  className={`${helpStyle} cursor-pointer`}
+                >
+                  How Fawna can help <span aria-hidden>↓</span>
+                </button>
+              )
+            ) : (
+              firstSkill && (
+                <a href="#next-steps" className={helpStyle}>
+                  How Fawna can help <span aria-hidden>↓</span>
+                </a>
+              )
             )}
           </div>
 
@@ -212,7 +397,32 @@ export default function ResultsList({ summary }: { summary: WorksheetSummary }) 
           </ol>
         </div>
       </div>
-      {firstSkill && <NextSteps skill={firstSkill} />}
+      {explanations ? (
+        showCards && (
+          <section
+            ref={cardsRef}
+            id="explanations"
+            aria-labelledby="explanations-heading"
+            className="mt-10 scroll-mt-6 motion-safe:animate-fade"
+          >
+            <p className="text-sm font-semibold tracking-wide text-rust uppercase">
+              Read these together
+            </p>
+            <h3 id="explanations-heading" className="mt-2 font-display text-3xl font-medium">
+              How Fawna can help
+            </h3>
+            <p className="mt-2 max-w-[52ch] text-ink/80">
+              One card for each skill gap. Learn-by-heart skills need practice, not explaining, so
+              they don’t get a card.
+            </p>
+            <div className="mt-6">
+              <ExplanationCards cards={explanations} skillGaps={summary.skillGaps} />
+            </div>
+          </section>
+        )
+      ) : (
+        firstSkill && <NextSteps skill={firstSkill} />
+      )}
     </>
   );
 }

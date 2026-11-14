@@ -78,5 +78,23 @@ export const SAMPLE_RESULT: WorksheetResult = {
       result: "incorrect",
       skill: { source: "list", skillId: "percentage-facts" },
     },
+    // Q9 and Q10 are not on the golden set sheet. They were added so the sample
+    // shows a blank question and a failed explanation card (issue #4).
+    {
+      number: "9",
+      question: "Round 3.46 to the nearest tenth.",
+      childAnswer: "",
+      correctAnswer: "3.5",
+      result: "blank",
+      skill: { source: "list", skillId: "rounding-decimals" },
+    },
+    {
+      number: "10",
+      question: "Write 0.7 as a fraction.",
+      childAnswer: "7/100",
+      correctAnswer: "7/10",
+      result: "incorrect",
+      skill: { source: "list", skillId: "fractions-to-decimals" },
+    },
   ],
 };

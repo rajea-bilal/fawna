@@ -45,14 +45,16 @@ function other(number: string, result: "correct" | "unreadable"): MarkedQuestion
 const numbers = (questions: MarkedQuestion[]) => questions.map((q) => q.number);
 
 describe("groupSkillGaps", () => {
-  it("groups the sample worksheet into its two skill gaps", () => {
+  it("groups the sample worksheet into its four skill gaps", () => {
     const gaps = groupSkillGaps(SAMPLE_RESULT);
 
     expect(gaps.map((gap) => [gap.key, gap.name, gap.kind])).toEqual([
       ["dividing-by-10-100-1000", "Dividing by 10, 100, 1000", "method"],
       ["percentage-facts", "Percentage facts (50% = ½, 25% = ¼, 10% = ⅒)", "fact"],
+      ["rounding-decimals", "Rounding decimals", "method"],
+      ["fractions-to-decimals", "Converting fractions and decimals", "method"],
     ]);
-    expect(gaps.map((gap) => gap.exampleQuestion.number)).toEqual(["2", "8"]);
+    expect(gaps.map((gap) => gap.exampleQuestion.number)).toEqual(["2", "8", "9", "10"]);
   });
 
   it("puts wrong and blank answers with the same skill into one skill gap", () => {

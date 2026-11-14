@@ -8,6 +8,7 @@ import {
   type WorksheetSummary,
 } from "@/lib/ai/summariseResult";
 import { SAMPLE_RESULT } from "@/lib/demo/sampleResult";
+import { SAMPLE_EXPLANATIONS } from "@/lib/demo/sampleExplanations";
 import { honeyButton, oliveButton } from "./landing/buttonStyles";
 import ResultsList from "./ResultsList";
 
@@ -273,7 +274,10 @@ export default function ImageUpload() {
               Sample result
             </p>
           )}
-          <ResultsList summary={summary} />
+          <ResultsList
+            summary={summary}
+            explanations={isSample ? SAMPLE_EXPLANATIONS : undefined}
+          />
         </section>
       )}
     </div>
