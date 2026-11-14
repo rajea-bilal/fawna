@@ -590,7 +590,7 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 # ADR-024: Saved explanations for the sample worksheet
 
 - Date: 2026-10-31
-- Status: Accepted
+- Status: Implemented
 
 **Context:** Visitors without the demo code can try a sample worksheet. They'll click **How Fawna can help** too.
 
