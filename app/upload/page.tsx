@@ -1,8 +1,8 @@
 import Link from "next/link";
 import ImageUpload from "../components/ImageUpload";
 
-// A light, editorial page (issue #18): one font, thin rules, white stamp-edged
-// cards, and the same soft colours as the results below the form.
+// A light, editorial page (issue #18): one font, thin rules, white brick-bodied
+// cards with a peach shade, and the same soft colours as the results below the form.
 export default function UploadPage() {
   return (
     <div className="flex flex-1 flex-col bg-canvas font-ui text-charcoal">

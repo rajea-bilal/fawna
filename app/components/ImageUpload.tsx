@@ -10,6 +10,7 @@ import {
 import { SAMPLE_RESULT } from "@/lib/demo/sampleResult";
 import { SAMPLE_EXPLANATIONS } from "@/lib/demo/sampleExplanations";
 import BuildingBricks from "./BuildingBricks";
+import { BrickStuds, brickButton } from "./brickButton";
 import ResultsList from "./ResultsList";
 
 // Upload page styles (issue #18), matching the results below the form.
@@ -17,9 +18,6 @@ const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-charcoal";
 const pressable =
   "cursor-pointer transition-[background-color,scale] duration-150 ease-snappy motion-safe:active:scale-[0.97]";
-// The one strong action on the page: a peach brick with a clay side and four
-// studs on top. Pressing (or marking) seats it: it drops 4px onto its side.
-const brickButton = `relative mt-2 inline-flex min-h-[50px] cursor-pointer items-center justify-center gap-2 rounded-[4px] bg-peach px-6 text-base font-semibold text-charcoal shadow-[0_5px_0_var(--color-clay)] transition-[translate,box-shadow,background-color] duration-[120ms] ease-snappy hover:bg-[#f4d6b8] active:shadow-[0_1px_0_var(--color-clay)] motion-safe:active:translate-y-1 aria-busy:cursor-wait aria-busy:shadow-[0_1px_0_var(--color-clay)] motion-safe:aria-busy:translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-[7px] focus-visible:outline-charcoal`;
 // Quieter actions: a soft honey tint.
 const softButton = `${pressable} inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-honey/16 px-6 text-base font-semibold text-charcoal hover:bg-honey/26 ${focusRing}`;
 const label = "text-xs font-semibold tracking-[0.13em] text-dusk uppercase";
@@ -155,9 +153,10 @@ export default function ImageUpload() {
           </button>
         </section>
 
-        {/* The full path, on one white stamp-edged card like the explanation cards. */}
-        <div className="paper-shadow">
-          <section className="stamp-edge bg-white p-7 sm:p-9">
+        {/* The full path, on one brick-bodied card like the explanation cards:
+          a fine outline and a solid peach shade. */}
+        <div className="mr-[7px]">
+          <section className="rounded-[3px] border border-charcoal bg-white p-7 shadow-[7px_7px_0_var(--color-peach)] sm:p-9">
             <h2 className="text-2xl leading-tight font-semibold tracking-[-0.01em]">
               Mark your own
             </h2>
@@ -247,21 +246,10 @@ export default function ImageUpload() {
                     onClick={handleAnalyze}
                     disabled={isMarking}
                     aria-busy={isMarking}
-                    className={`group ${brickButton}`}
+                    className={`mt-2 ${brickButton}`}
                   >
-                    {/* Four studs along the top edge. While marking they light up in turn. */}
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-x-3.5 -top-[7px] flex justify-between"
-                    >
-                      {[0, 1, 2, 3].map((i) => (
-                        <span
-                          key={i}
-                          style={{ animationDelay: `${i * 150}ms` }}
-                          className="h-[7px] w-[18px] rounded-t-[3px] bg-peach shadow-[inset_0_2px_0_rgb(255_255_255/0.22)] motion-safe:group-aria-busy:animate-stud"
-                        />
-                      ))}
-                    </span>
+                    {/* While marking, the studs light up in turn. */}
+                    <BrickStuds />
                     {isMarking ? "Marking…" : "Mark worksheet"}
                   </button>
                   {/* Same building bricks as the card loader: one "working on it" picture. */}

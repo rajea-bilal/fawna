@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ExplanationCard } from "@/lib/ai/explanationSchema";
 import { readExplainStream } from "@/lib/ai/readExplainStream";
 import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
 import type { WorksheetSummary } from "@/lib/ai/summariseResult";
 import type { SkillGap } from "@/lib/ai/groupSkillGaps";
 import BuildingBricks from "./BuildingBricks";
+import { BrickStuds, brickButton } from "./brickButton";
 
 // Results page design: issue #18. A magazine-style opener (big score, a ruled
 // list of skills) above a row of cards the child works through one step at a time.
@@ -219,37 +220,29 @@ function SkillRow({
   );
 }
 
-// The circular "worked through" postmark, stamped once when the last step is done.
-function Postmark() {
-  const pathId = `pm-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+// One stud per step along the card's top edge. Finished steps fill peach, the
+// current one honey; when the card is worked through they turn olive and pop in turn.
+function StepStuds({ total, step, done }: { total: number; step: number; done: boolean }) {
   return (
-    <span aria-hidden className="inline-block -rotate-9">
-      <svg
-        viewBox="0 0 156 96"
-        className="w-[120px] text-olive motion-safe:animate-stamp motion-reduce:animate-fade"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-      >
-        <path id={pathId} d="M14 48a34 34 0 1 1 68 0a34 34 0 1 1-68 0" stroke="none" />
-        <circle cx="48" cy="48" r="43" strokeWidth="2" />
-        <circle cx="48" cy="48" r="25" strokeWidth="1.4" />
-        <text
-          fontSize="8.6"
-          fontWeight="700"
-          letterSpacing="1.6"
-          fill="currentColor"
-          stroke="none"
-          className="font-ui"
-        >
-          <textPath href={`#${pathId}`}>WORKED THROUGH · FAWNA · WELL DONE ·</textPath>
-        </text>
-        <path d="M37 49l8 8 15-18" strokeWidth="4.2" strokeLinejoin="round" />
-        <path
-          d="M96 34q7-6 14 0t14 0t14 0t14 0M96 48q7-6 14 0t14 0t14 0t14 0M96 62q7-6 14 0t14 0t14 0t14 0"
-          strokeWidth="1.8"
-        />
-      </svg>
+    <span
+      aria-hidden
+      className="pointer-events-none absolute -top-[10px] right-[22px] left-[22px] flex gap-[9px]"
+    >
+      {Array.from({ length: total }, (_, i) => {
+        const filled = done || i <= step;
+        const current = !done && i === step;
+        return (
+          <span
+            key={i}
+            style={done ? { animationDelay: `${i * 70}ms` } : undefined}
+            className={`block h-[10px] max-w-8 flex-1 origin-bottom overflow-hidden rounded-t-[4px] border border-b-0 border-charcoal bg-canvas ${done ? "motion-safe:animate-stud-pop" : ""}`}
+          >
+            <span
+              className={`block h-full origin-bottom transition-[scale,background-color] duration-[220ms] ease-snappy ${filled ? "scale-y-100" : "scale-y-0"} ${done ? "bg-olive" : current ? "bg-honey" : "bg-peach"}`}
+            />
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -286,8 +279,10 @@ function AnswerPair({ card, result }: { card: ExplanationCard; result: Result })
   );
 }
 
-// One explanation card. Closed: the mistake. Open: what went wrong, then the
-// steps one at a time, then a postmark when the child has worked through them.
+// One explanation card, built like a brick (issue #18): a fine outline, a solid
+// peach shade, and one stud per step on top. Closed: the mistake. Open: what went
+// wrong, then the steps one at a time, laid like a brick wall. Worked through: the
+// studs turn olive and the card presses into its shade, like the brick button.
 function ExplainedCard({
   card,
   gap,
@@ -329,7 +324,10 @@ function ExplainedCard({
   const visibleSteps = done ? total : step + 1;
 
   return (
-    <article className="stamp-edge bg-white p-6 sm:p-7">
+    <article
+      className={`relative mt-[10px] mr-[7px] rounded-[3px] border border-charcoal bg-white p-6 transition-[translate,box-shadow] duration-[260ms] ease-snappy sm:p-7 ${done ? "shadow-[3px_3px_0_var(--color-olive-soft)] motion-safe:translate-x-1 motion-safe:translate-y-1" : "shadow-[7px_7px_0_var(--color-peach)]"}`}
+    >
+      <StepStuds total={total} step={step} done={done} />
       <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${label}`}>
         <Mark result={result} className="text-sm" />
         <span>
@@ -384,28 +382,23 @@ function ExplainedCard({
             <p className={`${label} tabular-nums`}>
               {done ? `All ${total} steps` : `Step ${step + 1} of ${total}`}
             </p>
-            <ol aria-live="polite" className="mt-2">
+            {/* Steps stack like a brick wall: every other course is offset. */}
+            <ol aria-live="polite" className="mt-2 grid gap-1.5">
               {card.steps.slice(0, visibleSteps).map((text, index) => {
                 const current = index === step && !done;
                 return (
                   <li
                     key={index}
                     aria-current={current ? "step" : undefined}
-                    className="grid grid-cols-[30px_minmax(0,1fr)] items-start gap-x-3 border-t border-charcoal/9 py-2.5 first:border-t-0 motion-safe:animate-rise motion-reduce:animate-fade"
+                    className={`flex items-start gap-3 rounded-[5px] border py-3 pr-3 pl-2.5 transition-colors duration-200 motion-safe:animate-rise motion-reduce:animate-fade ${index % 2 === 0 ? "mr-3.5" : "ml-3.5"} ${current ? "border-honey bg-honey-soft text-charcoal" : done ? "border-charcoal/16 text-charcoal" : "border-charcoal/16 text-dusk"}`}
                   >
                     <span
                       aria-hidden
-                      className={`grid size-[30px] place-items-center rounded-full text-sm font-semibold tabular-nums transition-colors duration-200 ${current ? "bg-honey text-charcoal" : "border border-charcoal/16 text-dusk"}`}
+                      className={`mt-px grid size-6 shrink-0 place-items-center rounded-[4px] border text-[13px] font-semibold text-charcoal tabular-nums ${current ? "border-honey bg-honey" : done ? "border-olive-soft bg-olive-pale" : "border-peach bg-peach-soft"}`}
                     >
                       {index + 1}
                     </span>
-                    <p
-                      className={
-                        current
-                          ? "pt-0.5 text-[17px] leading-snug font-semibold"
-                          : "pt-1 text-[15px] leading-relaxed text-dusk"
-                      }
-                    >
+                    <p className={`min-w-0 leading-snug ${current ? "text-[17px] font-medium" : "text-[15px]"}`}>
                       {text}
                     </p>
                   </li>
@@ -414,32 +407,38 @@ function ExplainedCard({
             </ol>
 
             {done ? (
-              <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2 border-t border-charcoal/16 pt-3.5 motion-safe:animate-rise motion-reduce:animate-fade">
-                <Postmark />
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-t border-charcoal/16 pt-4 motion-safe:animate-rise motion-reduce:animate-fade">
                 <div>
-                  <p className="text-xl leading-tight font-semibold">Worked through.</p>
-                  <p className="mt-0.5 text-[15px] text-dusk">The answer is {card.correctAnswer}.</p>
+                  <p className="flex items-center gap-2 text-lg leading-tight font-semibold text-olive">
+                    <Icon name="check" />
+                    Worked through
+                  </p>
+                  <p className="mt-1 text-[15px] text-dusk">The answer is {card.correctAnswer}.</p>
                 </div>
-                <div className="col-span-full flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-                  {hasNextCard ? (
-                    <>
-                      <button ref={doneRef} type="button" onClick={onNextCard} className={softButton}>
-                        Next card
-                        <Icon name="arrow" className="text-honey-deep" />
-                      </button>
-                      <button type="button" onClick={again} className={quietButton}>
-                        Go again
-                      </button>
-                    </>
-                  ) : (
-                    <button ref={doneRef} type="button" onClick={again} className={quietButton}>
-                      Go again
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                  <button
+                    ref={hasNextCard ? undefined : doneRef}
+                    type="button"
+                    onClick={again}
+                    className={quietButton}
+                  >
+                    Go again
+                  </button>
+                  {hasNextCard && (
+                    <button
+                      ref={doneRef}
+                      type="button"
+                      onClick={onNextCard}
+                      className={`mt-1.5 mb-1 min-h-11 px-5 text-[15px] ${brickButton}`}
+                    >
+                      <BrickStuds small />
+                      Next card
                     </button>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="mt-4 flex items-end justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setStep((s) => s - 1)}
@@ -450,10 +449,10 @@ function ExplainedCard({
                 <button
                   type="button"
                   onClick={() => (step < total - 1 ? setStep((s) => s + 1) : finish())}
-                  className={softButton}
+                  className={`mt-1.5 mb-1 min-h-11 px-5 text-[15px] ${brickButton}`}
                 >
+                  <BrickStuds small />
                   {step < total - 1 ? "Next step" : "We’ve got it"}
-                  <Icon name="arrow" className="text-honey-deep" />
                 </button>
               </div>
             )}
@@ -492,7 +491,8 @@ function ExplainedCard({
 // The AI skipped this skill gap, or its explanation failed the check.
 function FailedCard({ card, gap }: { card: FailedCardData; gap?: SkillGap }) {
   return (
-    <article className="rounded-2xl border-[1.5px] border-dashed border-charcoal/20 p-6 sm:p-7">
+    // Same brick shape, unbuilt: a dashed outline with no shade or studs.
+    <article className="mt-[10px] mr-[7px] rounded-[3px] border border-dashed border-charcoal/35 bg-white p-6 sm:p-7">
       <p className={label}>{gap?.exampleQuestion.number ? `Q${gap.exampleQuestion.number}` : "Card"}</p>
       <h3 className="mt-1.5 text-[22px] leading-tight font-semibold">Couldn’t explain this one</h3>
       {gap && <p className="mt-1 text-[15px] text-dusk">{gap.name}</p>}
@@ -783,7 +783,7 @@ export default function ResultsList({
                   className={`w-[min(86%,360px)] shrink-0 snap-start motion-safe:animate-rise motion-reduce:animate-fade lg:w-auto lg:min-w-0 lg:shrink lg:basis-0 ${open ? "lg:grow-[2.5]" : "lg:grow"}`}
                 >
                   <div
-                    className={`paper-shadow transition-[translate,rotate] duration-200 ease-snappy ${open ? "" : "motion-safe:hover:-translate-y-1 motion-safe:hover:-rotate-[0.4deg]"}`}
+                    className={`transition-[translate,rotate] duration-200 ease-snappy ${open ? "" : "motion-safe:hover:-translate-y-1 motion-safe:hover:-rotate-[0.4deg]"}`}
                   >
                     {card.status === "explained" ? (
                       <ExplainedCard
