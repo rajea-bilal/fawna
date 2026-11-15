@@ -673,3 +673,32 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 **Lesson:** Decide something in one place, then pass the result to everyone who needs it.
 
 ---
+
+# ADR-027: The marking AI writes a short note on the child's working
+
+- Date: 2026-11-15
+- Status: Proposed
+
+**Context:** The marking AI sees the whole photo, including the child's working. But the reply shape has no field for it, so the working is lost. The explain AI gets text only (ADR-022), so it can't explain the step that broke. Golden-set entry 2: the working showed 15/10 of 80, so the child thinks percent means "out of 10". The card taught 10% + 5% instead of fixing that.
+
+**Options:** Copy the working exactly · A short note on what the child did · Send the photo to the explain AI too
+
+**Decision:** A short note. One new field, `workingNote`, on wrong and blank answers only. Example: "Used 15/10 instead of 15/100." It is `""` when there's no working. The explain step sends it to the explain AI with the example question.
+
+**Why:**
+
+- Copied working is messy (crossings-out, fractions). The explain AI would still have to work out what it means.
+- The photo would make the explain call slower and more expensive, which is what ADR-022 avoids.
+- The marking AI already reads the working to mark it. Writing one line costs little.
+
+**Trade-offs and risks:**
+
+- The note is only as good as the AI's reading. A wrong note could lead to a wrong explanation.
+- More output tokens for each wrong or blank answer.
+- The sample worksheet and saved explanations must be made again (ADR-024).
+
+**Validation:** None yet. Rerun golden-set entry 2 and check that the percentage card mentions 15/10.
+
+**Lesson:** If the AI sees something but the reply shape has no field for it, it's lost.
+
+---

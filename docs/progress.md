@@ -110,7 +110,7 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 
 - Parents log in (Supabase), replacing the demo code
 - iPhone HEIC photos uploaded from a Mac are rejected. Decide what to do.
-- Marking writes a short note on the child's working (e.g. "used 15/10, not 15/100"), and the explain AI gets it. Found in golden-set entry 2.
+- Marking writes a short note on the child's working, and the explain AI gets it (ADR-027). Found in golden-set entry 2.
 - Let the parent type in an answer Fawna couldn't read.
 
 ## Plan for later: English worksheets
