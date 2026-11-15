@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MATH_CATEGORIES } from "@/lib/ai/mathSkills";
 import type { ExplanationCard } from "@/lib/ai/explanationSchema";
+import { readExplainStream } from "@/lib/ai/readExplainStream";
 import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
 import type { WorksheetSummary } from "@/lib/ai/summariseResult";
 import type { SkillGap } from "@/lib/ai/groupSkillGaps";
@@ -86,9 +87,12 @@ function SkillGapList({ skillGaps }: { skillGaps: SkillGap[] }) {
 function ExplanationCards({
   cards,
   skillGaps,
+  stagger,
 }: {
   cards: ExplanationCard[];
   skillGaps: SkillGap[];
+  // Saved cards all arrive at once, so stagger them. Live cards already arrive one by one.
+  stagger: boolean;
 }) {
   return (
     <ul className="grid gap-6">
@@ -97,8 +101,7 @@ function ExplanationCards({
         return (
           <li
             key={card.key}
-            // Same short stagger as the question rows, so cards arrive one by one.
-            style={{ animationDelay: `${Math.min(index, 10) * 120}ms` }}
+            style={stagger ? { animationDelay: `${Math.min(index, 10) * 120}ms` } : undefined}
             className="motion-safe:animate-rise motion-reduce:animate-fade"
           >
             {card.status === "explained" ? (
@@ -221,57 +224,56 @@ function FailedCard({
   );
 }
 
-const NEXT_STEPS = [
-  {
-    title: "Explain it.",
-    text: "Your child’s answer next to the right one, step by step, with a picture when it helps.",
-  },
-  { title: "Check it.", text: "One quick question, to make sure it clicked." },
-  { title: "Practise it.", text: "Questions on this skill, then mixed with others." },
-];
-
-// The plan after marking (ADR-015), shown on the parent's own result.
-// Dashed and button-free so it can't be mistaken for part of the marks.
-function NextSteps({ skill }: { skill: string }) {
+// Shown under the cards while the AI is still writing more.
+// The same hopping pixels as the marking button, in ink so they show on paper.
+// Reduced motion: the pixels sit still.
+function WritingCard({ first }: { first: boolean }) {
   return (
-    <aside id="next-steps" className="mt-6 scroll-mt-6 rounded-2xl border-2 border-dashed border-ink/15 p-7 motion-safe:animate-rise motion-reduce:animate-fade sm:p-10">
-      <p className="text-sm font-semibold tracking-wide text-rust uppercase">Coming soon</p>
-      <h3 className="mt-2 font-display text-2xl font-medium">From mistake to practice</h3>
-      <p className="mt-3 text-ink/80">
-        For <span className="font-semibold text-ink">{skill}</span>, Fawna will:
+    <div className="flex items-center gap-4 rounded-2xl border-2 border-dashed border-ink/15 p-6 sm:p-9">
+      <span aria-hidden className="relative h-[5px] w-12 overflow-hidden">
+        <span className="absolute inset-y-0 left-0 flex gap-px motion-safe:animate-snake">
+          <span className="size-[5px] bg-ink/25" />
+          <span className="size-[5px] bg-ink/50" />
+          <span className="size-[5px] bg-honey" />
+        </span>
+      </span>
+      <p className="text-ink/70">
+        {first ? "Fawna is writing the first card…" : "Writing the next card…"}
       </p>
-      <ol className="mt-4 space-y-3">
-        {NEXT_STEPS.map((step, index) => (
-          <li key={step.title} className="flex gap-3">
-            <span
-              aria-hidden
-              className="grid size-7 shrink-0 place-items-center rounded-full bg-peach/50 text-sm font-bold text-rust tabular-nums"
-            >
-              {index + 1}
-            </span>
-            <p className="text-ink/80">
-              <span className="font-semibold text-ink">{step.title}</span> {step.text}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </aside>
+    </div>
   );
 }
+
+// Live explaining: nothing asked yet, writing, finished, or failed.
+type ExplainStatus = "idle" | "loading" | "done" | "error";
 
 export default function ResultsList({
   summary,
   explanations,
+  demoCode,
 }: {
   summary: WorksheetSummary;
-  // Saved cards for the sample (ADR-024). Live results don't pass any yet,
-  // so they keep the "coming soon" card until the explain step is connected.
+  // Saved cards for the sample (ADR-024). The button shows these, with no AI call.
   explanations?: ExplanationCard[];
+  // Live results only: the demo code, so the button can ask the explain endpoint.
+  demoCode?: string;
 }) {
-  // First skill to work on, if any. Only one is named to keep the card short.
-  const firstSkill = summary.questions.map(skillName).find((name) => name !== null);
+  const isSample = explanations !== undefined;
+  // Fact gaps get no card (ADR-021), so with only facts there's nothing to explain.
+  const canExplain = summary.skillGaps.some((gap) => gap.kind !== "fact");
   const [showCards, setShowCards] = useState(false);
+  // Live cards, added one by one as they arrive. The sample uses its saved cards.
+  const [liveCards, setLiveCards] = useState<ExplanationCard[]>([]);
+  const [status, setStatus] = useState<ExplainStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
   const cardsRef = useRef<HTMLElement>(null);
+  // Lets us stop a running request, e.g. when the parent marks a new sheet.
+  const requestRef = useRef<AbortController | null>(null);
+
+  // Leaving this result stops the AI call, so we don't pay for cards no one sees.
+  useEffect(() => () => requestRef.current?.abort(), []);
+
+  const cards = isSample ? explanations : liveCards;
 
   // The cards land below the marks, so bring them into view once they exist.
   // Reduced motion: jump, no glide.
@@ -283,10 +285,58 @@ export default function ResultsList({
     if (showCards) scrollToCards();
   }, [showCards]);
 
-  // Sample only: show the saved cards. No request is sent.
+  // Live only: ask the explain endpoint and show each card as it arrives.
+  // Try again runs this again and starts from no cards.
+  const explain = async () => {
+    requestRef.current?.abort();
+    const request = new AbortController();
+    requestRef.current = request;
+    setLiveCards([]);
+    setError(null);
+    setStatus("loading");
+
+    let gotReply = false;
+    try {
+      const response = await fetch("/api/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-demo-code": demoCode ?? "" },
+        // The server removes fact gaps itself (ADR-026), so send them all.
+        body: JSON.stringify({ skillGaps: summary.skillGaps }),
+        signal: request.signal,
+      });
+      gotReply = true;
+
+      if (!response.ok || !response.body) {
+        const data = await response.json().catch(() => null);
+        setError(data?.message ?? "Fawna couldn't write the explanations. Please try again.");
+        setStatus("error");
+        return;
+      }
+
+      await readExplainStream(response.body, (card) =>
+        setLiveCards((previous) => [...previous, card]),
+      );
+      setStatus("done");
+    } catch {
+      // We stopped it on purpose (new sheet, or try again). Nothing to show.
+      if (request.signal.aborted) return;
+      setError(
+        gotReply
+          ? "Fawna stopped before it finished. Please try again."
+          : "We couldn't reach Fawna. Check your connection and try again.",
+      );
+      setStatus("error");
+    }
+  };
+
+  // First click shows the cards. Later clicks just scroll back to them.
   const handleHelp = () => {
-    if (showCards) scrollToCards();
-    else setShowCards(true);
+    if (showCards) {
+      scrollToCards();
+      return;
+    }
+    setShowCards(true);
+    if (!isSample) explain();
   };
 
   const helpStyle =
@@ -319,24 +369,16 @@ export default function ResultsList({
               ))}
             </ul>
             {/* Outside the aria-hidden list, so screen readers can reach the link. */}
-            {explanations ? (
-              explanations.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleHelp}
-                  aria-expanded={showCards}
-                  aria-controls="explanations"
-                  className={`${helpStyle} cursor-pointer`}
-                >
-                  How Fawna can help <span aria-hidden>↓</span>
-                </button>
-              )
-            ) : (
-              firstSkill && (
-                <a href="#next-steps" className={helpStyle}>
-                  How Fawna can help <span aria-hidden>↓</span>
-                </a>
-              )
+            {canExplain && (
+              <button
+                type="button"
+                onClick={handleHelp}
+                aria-expanded={showCards}
+                aria-controls="explanations"
+                className={`${helpStyle} cursor-pointer`}
+              >
+                How Fawna can help <span aria-hidden>↓</span>
+              </button>
             )}
           </div>
 
@@ -397,12 +439,12 @@ export default function ResultsList({
           </ol>
         </div>
       </div>
-      {explanations ? (
-        showCards && (
+      {showCards && (
           <section
             ref={cardsRef}
             id="explanations"
             aria-labelledby="explanations-heading"
+            aria-busy={status === "loading"}
             className="mt-10 scroll-mt-6 motion-safe:animate-fade"
           >
             <p className="text-sm font-semibold tracking-wide text-rust uppercase">
@@ -415,13 +457,24 @@ export default function ResultsList({
               One card for each skill gap. Learn-by-heart skills need practice, not explaining, so
               they don’t get a card.
             </p>
-            <div className="mt-6">
-              <ExplanationCards cards={explanations} skillGaps={summary.skillGaps} />
+            <div className="mt-6 grid gap-6">
+              {cards.length > 0 && (
+                <ExplanationCards cards={cards} skillGaps={summary.skillGaps} stagger={isSample} />
+              )}
+              {status === "loading" && <WritingCard first={cards.length === 0} />}
+              {status === "error" && (
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-terracotta/10 p-6"
+                >
+                  <p className="text-ink/80">{error}</p>
+                  <button type="button" onClick={explain} className={`${helpStyle} cursor-pointer`}>
+                    Try again
+                  </button>
+                </div>
+              )}
             </div>
           </section>
-        )
-      ) : (
-        firstSkill && <NextSteps skill={firstSkill} />
       )}
     </>
   );
