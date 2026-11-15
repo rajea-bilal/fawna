@@ -277,6 +277,7 @@ export default function ImageUpload() {
           <ResultsList
             summary={summary}
             explanations={isSample ? SAMPLE_EXPLANATIONS : undefined}
+            demoCode={isSample ? undefined : demoCode.trim()}
           />
         </section>
       )}
