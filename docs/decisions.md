@@ -512,7 +512,7 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 # ADR-021: One explanation per skill gap, written for the child
 
 - Date: 2026-10-31
-- Status: Accepted
+- Status: Implemented
 
 **Context:** After the score, the parent clicks **How Fawna can help**. A sheet can have 15–20 mistakes, often from only a few skills.
 
@@ -545,7 +545,7 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 # ADR-022: One streamed AI call, text only
 
 - Date: 2026-10-31
-- Status: Accepted
+- Status: Implemented
 
 **Context:** A child shouldn't stare at a spinner, and many mistakes mean many tokens.
 
@@ -590,7 +590,7 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 # ADR-024: Saved explanations for the sample worksheet
 
 - Date: 2026-10-31
-- Status: Accepted
+- Status: Implemented
 
 **Context:** Visitors without the demo code can try a sample worksheet. They'll click **How Fawna can help** too.
 
@@ -611,7 +611,7 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 # ADR-025: Agree the shared shape first, then two agents in parallel
 
 - Date: 2026-10-31
-- Status: Accepted
+- Status: Implemented
 
 **Context:** I want several AI agents building at once without breaking each other's work.
 
@@ -638,7 +638,7 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 # ADR-026: Build the explanation schema for each sheet, and remove fact gaps before it
 
 - Date: 2026-11-02
-- Status: Accepted
+- Status: Implemented
 
 **Context:** The AI's explanation must use one of this sheet's skill gap keys. Each sheet has different keys. Fact gaps don't get an explanation (ADR-021). Sometimes nothing is left to explain.
 

@@ -31,8 +31,7 @@ describe("SAMPLE_EXPLANATIONS", () => {
     }
   });
 
-  it("includes a blank question and a failed card, so both can be checked on screen", () => {
+  it("includes a blank question, so its card can be checked on screen", () => {
     expect(SAMPLE_EXPLANATIONS.some((card) => card.childAnswer === "")).toBe(true);
-    expect(SAMPLE_EXPLANATIONS.some((card) => card.status === "failed")).toBe(true);
   });
 });

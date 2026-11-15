@@ -1,6 +1,6 @@
 # Fawna — Progress
 
-Last updated: 2026-11-06
+Last updated: 2026-11-14
 
 ## What Fawna does right now
 
@@ -37,7 +37,8 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 | Shared counting for live and sample results | `lib/ai/summariseResult.ts` | Build only |
 | Group wrong and blank answers into skill gaps (ADR-021), straight after marking, for live and sample results | `lib/ai/groupSkillGaps.ts`, `summariseResult.ts` | Yes, Vitest |
 | Skill-gap list under the score: name, number of questions, "learn by heart" for fact skills | `ResultsList.tsx` | Yes, with the sample in Chrome |
-| Explanation cards on the sample: the button shows hand-written cards, no AI call (#4) | `ResultsList.tsx`, `lib/demo/sampleExplanations.ts` | Yes, Vitest, and phone and desktop in Chrome |
+| Explain step: skill gaps in, one explanation card per gap streamed out, fact gaps skipped (#5) | `lib/ai/explainSkillGaps.ts`, `app/api/explain/route.ts` | Yes, Vitest (fake AI), and one real call with the sample's skill gaps |
+| Explanation cards on the sample: the button shows saved cards from a live run, no AI call (#4, #7) | `ResultsList.tsx`, `lib/demo/sampleExplanations.ts` | Yes, Vitest, and phone and desktop in Chrome |
 | Suggested skills shown with no "(suggested)" tag (the data still knows) | `ResultsList.tsx` | Build only |
 | Logs show counts only, never a child's answers | `route.ts` | Yes |
 | Link previews for getfawna.com | `app/layout.tsx` | Yes, tags in the built page |
@@ -82,10 +83,10 @@ Without a code, visitors can click **Try a sample worksheet** to see a saved res
 - [x] Write the spec with `/to-spec` (#1)
 - [x] Explanation schema (Zod), with only this sheet's keys allowed (#2)
 - [x] Split the work into tickets with `/to-tickets`
-- [ ] Agent 1: explain route, instructions, streaming
+- [x] Agent 1: explain route, instructions, streaming (#5)
 - [x] Agent 2: skill-gap list (#3)
 - [x] Agent 2: button and explanation cards (#4)
-- [ ] Saved explanations for the sample worksheet
+- [x] Saved explanations for the sample worksheet, from one live run, checked by hand (#7)
 - [ ] Later: the AI picks the best example question, pictures drawn by code, check question
 
 ## Not done yet ⏳

@@ -16,7 +16,7 @@ One glance at how data moves through the app.
  ② Code counts the score             ✅  lib/ai/summariseResult.ts
          │   one WorksheetSummary
          ▼
- ③ Code groups the mistakes          ✅  lib/ai/groupSkillGaps.ts  (not on screen yet)
+ ③ Code groups the mistakes          ✅  lib/ai/groupSkillGaps.ts
          │   one SkillGap per skill
          ▼
  Parent clicks "How Fawna can help"
