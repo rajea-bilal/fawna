@@ -716,7 +716,7 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 
 - A big score, the counts, and "Skills to practise" at the top.
 - Explanation cards in a row, one open at a time. Steps show one at a time and stack like a brick wall.
-- Cards are built like bricks, not stamps: a fine outline, a solid peach shade, and one stud per step on top. When the steps are worked through, the studs turn olive and the card presses into its shade. The perforated stamp edge said "post office"; the page's story is building.
+- Cards are built like bricks, not stamps: a fine outline, a solid peach shade, and four studs on top. The studs are decorative and the same on every card (form, explanation, couldn't-explain), so cards without steps match. When the steps are worked through, the card presses into its shade. The perforated stamp edge said "post office"; the page's story is building.
 - One brick button (peach face, clay side, studs) for the building actions: Mark worksheet, Next step, Next card.
 - One font, Inter Tight, for all text and numbers. Patrick Hand only for what the child wrote. Fraunces only for the logo.
 - A lighter page (`canvas` #fdfbf7), white cards, soft charcoal text. No rust, no stark black.

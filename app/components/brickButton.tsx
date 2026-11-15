@@ -6,6 +6,22 @@
 export const brickButton =
   "group relative inline-flex min-h-[50px] cursor-pointer items-center justify-center gap-2 rounded-[4px] bg-peach px-6 text-base font-semibold text-charcoal shadow-[0_5px_0_var(--color-clay)] transition-[translate,box-shadow,background-color] duration-[120ms] ease-snappy hover:bg-[#f4d6b8] active:shadow-[0_1px_0_var(--color-clay)] motion-safe:active:translate-y-1 aria-busy:cursor-wait aria-busy:shadow-[0_1px_0_var(--color-clay)] motion-safe:aria-busy:translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-[7px] focus-visible:outline-charcoal";
 
+// Four studs on a card's top edge: what makes every card a brick (issue #18).
+// Purely decorative, the same on every card, so cards without steps match too.
+// Put inside a `relative` card that has about 10px of room above it.
+export function CardStuds({ dashed = false }: { dashed?: boolean }) {
+  return (
+    <span aria-hidden className="pointer-events-none absolute -top-[10px] left-[22px] flex gap-[9px]">
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          className={`block h-[10px] w-8 rounded-t-[4px] border border-b-0 bg-white ${dashed ? "border-dashed border-charcoal/35" : "border-charcoal"}`}
+        />
+      ))}
+    </span>
+  );
+}
+
 // The studs along the top edge. Put inside a `brickButton`, before the label.
 export function BrickStuds({ small = false }: { small?: boolean }) {
   return (

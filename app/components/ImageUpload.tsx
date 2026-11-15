@@ -10,7 +10,7 @@ import {
 import { SAMPLE_RESULT } from "@/lib/demo/sampleResult";
 import { SAMPLE_EXPLANATIONS } from "@/lib/demo/sampleExplanations";
 import BuildingBricks from "./BuildingBricks";
-import { BrickStuds, brickButton } from "./brickButton";
+import { BrickStuds, CardStuds, brickButton } from "./brickButton";
 import ResultsList from "./ResultsList";
 
 // Upload page styles (issue #18), matching the results below the form.
@@ -19,7 +19,7 @@ const focusRing =
 const pressable =
   "cursor-pointer transition-[background-color,scale] duration-150 ease-snappy motion-safe:active:scale-[0.97]";
 // Quieter actions: a soft honey tint.
-const softButton = `${pressable} inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-honey/16 px-6 text-base font-semibold text-charcoal hover:bg-honey/26 ${focusRing}`;
+const softButton = `${pressable} inline-flex min-h-12 items-center justify-center gap-2 rounded-[4px] bg-honey/16 px-6 text-base font-semibold text-charcoal hover:bg-honey/26 ${focusRing}`;
 const label = "text-xs font-semibold tracking-[0.13em] text-dusk uppercase";
 
 export default function ImageUpload() {
@@ -153,10 +153,11 @@ export default function ImageUpload() {
           </button>
         </section>
 
-        {/* The full path, on one brick-bodied card like the explanation cards:
-          a fine outline and a solid peach shade. */}
-        <div className="mr-[7px]">
-          <section className="rounded-[3px] border border-charcoal bg-white p-7 shadow-[7px_7px_0_var(--color-peach)] sm:p-9">
+        {/* The full path, on one brick card like the explanation cards:
+          a fine outline, a solid peach shade and four studs. */}
+        <div className="mt-[10px] mr-[7px]">
+          <section className="relative rounded-[3px] border border-charcoal bg-white p-7 shadow-[7px_7px_0_var(--color-peach)] sm:p-9">
+            <CardStuds />
             <h2 className="text-2xl leading-tight font-semibold tracking-[-0.01em]">
               Mark your own
             </h2>
@@ -165,7 +166,7 @@ export default function ImageUpload() {
             </p>
 
             <ol className="mt-8 grid gap-8">
-              <li className="grid grid-cols-[30px_1fr] gap-x-3.5">
+              <li className="grid grid-cols-[24px_1fr] gap-x-3.5">
                 <StepNumber>1</StepNumber>
                 <label className="grid max-w-sm gap-1.5 text-sm font-semibold">
                   Demo code
@@ -180,7 +181,7 @@ export default function ImageUpload() {
                 </label>
               </li>
 
-              <li className="grid grid-cols-[30px_1fr] gap-x-3.5">
+              <li className="grid grid-cols-[24px_1fr] gap-x-3.5">
                 <StepNumber>2</StepNumber>
                 <div className="grid gap-1.5">
                   <p className="text-sm font-semibold">Worksheet photo</p>
@@ -209,7 +210,7 @@ export default function ImageUpload() {
                           fill
                           className="object-contain p-3 pb-14 motion-safe:animate-fade"
                         />
-                        <span className="absolute bottom-3 rounded-full border border-charcoal/16 bg-white px-3.5 py-1.5 text-sm font-semibold shadow-sm">
+                        <span className="absolute bottom-3 rounded-[4px] border border-charcoal/16 bg-white px-3.5 py-1.5 text-sm font-semibold shadow-sm">
                           Change photo
                         </span>
                       </>
@@ -238,7 +239,7 @@ export default function ImageUpload() {
                 </div>
               </li>
 
-              <li className="grid grid-cols-[30px_1fr] gap-x-3.5">
+              <li className="grid grid-cols-[24px_1fr] gap-x-3.5">
                 <StepNumber>3</StepNumber>
                 <div className="grid justify-items-start gap-4">
                   <button
@@ -307,12 +308,12 @@ export default function ImageUpload() {
   );
 }
 
-// A step number: the same thin circle as the card stepper.
+// A step number: the same square tile as the card steps.
 function StepNumber({ children }: { children: React.ReactNode }) {
   return (
     <span
       aria-hidden
-      className="grid size-[30px] place-items-center rounded-full border border-charcoal/16 text-sm font-semibold text-dusk tabular-nums"
+      className="mt-0.5 grid size-6 place-items-center rounded-[4px] border border-peach bg-peach-soft text-[13px] font-semibold text-charcoal tabular-nums"
     >
       {children}
     </span>

@@ -7,7 +7,7 @@ import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
 import type { WorksheetSummary } from "@/lib/ai/summariseResult";
 import type { SkillGap } from "@/lib/ai/groupSkillGaps";
 import BuildingBricks from "./BuildingBricks";
-import { BrickStuds, brickButton } from "./brickButton";
+import { BrickStuds, CardStuds, brickButton } from "./brickButton";
 
 // Results page design: issue #18. A magazine-style opener (big score, a ruled
 // list of skills) above a row of cards the child works through one step at a time.
@@ -65,7 +65,7 @@ function Mark({ result, className = "" }: { result: Result; className?: string }
 const label = "text-xs font-semibold tracking-[0.13em] text-dusk uppercase";
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-charcoal";
-const softButton = `inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-honey/16 px-[18px] text-[15px] font-semibold text-charcoal transition-[background-color,scale] duration-150 ease-snappy hover:bg-honey/26 active:scale-[0.97] ${focusRing}`;
+const softButton = `inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[4px] bg-honey/16 px-[18px] text-[15px] font-semibold text-charcoal transition-[background-color,scale] duration-150 ease-snappy hover:bg-honey/26 active:scale-[0.97] ${focusRing}`;
 const quietButton = `inline-flex min-h-11 cursor-pointer items-center px-2.5 text-[15px] font-semibold text-dusk underline decoration-charcoal/25 underline-offset-4 hover:text-charcoal ${focusRing}`;
 
 // The top of the page: score, counts and the skills to practise (issue #18).
@@ -220,33 +220,6 @@ function SkillRow({
   );
 }
 
-// One stud per step along the card's top edge. Finished steps fill peach, the
-// current one honey; when the card is worked through they turn olive and pop in turn.
-function StepStuds({ total, step, done }: { total: number; step: number; done: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className="pointer-events-none absolute -top-[10px] right-[22px] left-[22px] flex gap-[9px]"
-    >
-      {Array.from({ length: total }, (_, i) => {
-        const filled = done || i <= step;
-        const current = !done && i === step;
-        return (
-          <span
-            key={i}
-            style={done ? { animationDelay: `${i * 70}ms` } : undefined}
-            className={`block h-[10px] max-w-8 flex-1 origin-bottom overflow-hidden rounded-t-[4px] border border-b-0 border-charcoal bg-canvas ${done ? "motion-safe:animate-stud-pop" : ""}`}
-          >
-            <span
-              className={`block h-full origin-bottom transition-[scale,background-color] duration-[220ms] ease-snappy ${filled ? "scale-y-100" : "scale-y-0"} ${done ? "bg-olive" : current ? "bg-honey" : "bg-peach"}`}
-            />
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
 // What the child wrote next to the right answer.
 // A blank shows "Left blank", never "you wrote…" (user story 20).
 function AnswerPair({ card, result }: { card: ExplanationCard; result: Result }) {
@@ -280,9 +253,9 @@ function AnswerPair({ card, result }: { card: ExplanationCard; result: Result })
 }
 
 // One explanation card, built like a brick (issue #18): a fine outline, a solid
-// peach shade, and one stud per step on top. Closed: the mistake. Open: what went
-// wrong, then the steps one at a time, laid like a brick wall. Worked through: the
-// studs turn olive and the card presses into its shade, like the brick button.
+// peach shade, and four studs on top. Closed: the mistake. Open: what went
+// wrong, then the steps one at a time, laid like a brick wall. Worked through:
+// the card presses into its shade, like the brick button.
 function ExplainedCard({
   card,
   gap,
@@ -327,7 +300,7 @@ function ExplainedCard({
     <article
       className={`relative mt-[10px] mr-[7px] rounded-[3px] border border-charcoal bg-white p-6 transition-[translate,box-shadow] duration-[260ms] ease-snappy sm:p-7 ${done ? "shadow-[3px_3px_0_var(--color-olive-soft)] motion-safe:translate-x-1 motion-safe:translate-y-1" : "shadow-[7px_7px_0_var(--color-peach)]"}`}
     >
-      <StepStuds total={total} step={step} done={done} />
+      <CardStuds />
       <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${label}`}>
         <Mark result={result} className="text-sm" />
         <span>
@@ -491,8 +464,9 @@ function ExplainedCard({
 // The AI skipped this skill gap, or its explanation failed the check.
 function FailedCard({ card, gap }: { card: FailedCardData; gap?: SkillGap }) {
   return (
-    // Same brick shape, unbuilt: a dashed outline with no shade or studs.
-    <article className="mt-[10px] mr-[7px] rounded-[3px] border border-dashed border-charcoal/35 bg-white p-6 sm:p-7">
+    // Same brick shape, unbuilt: dashed outline and studs, no shade.
+    <article className="relative mt-[10px] mr-[7px] rounded-[3px] border border-dashed border-charcoal/35 bg-white p-6 sm:p-7">
+      <CardStuds dashed />
       <p className={label}>{gap?.exampleQuestion.number ? `Q${gap.exampleQuestion.number}` : "Card"}</p>
       <h3 className="mt-1.5 text-[22px] leading-tight font-semibold">Couldn’t explain this one</h3>
       {gap && <p className="mt-1 text-[15px] text-dusk">{gap.name}</p>}
