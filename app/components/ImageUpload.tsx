@@ -9,8 +9,20 @@ import {
 } from "@/lib/ai/summariseResult";
 import { SAMPLE_RESULT } from "@/lib/demo/sampleResult";
 import { SAMPLE_EXPLANATIONS } from "@/lib/demo/sampleExplanations";
-import { honeyButton, oliveButton } from "./landing/buttonStyles";
+import BuildingBricks from "./BuildingBricks";
 import ResultsList from "./ResultsList";
+
+// Upload page styles (issue #18), matching the results below the form.
+const focusRing =
+  "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-charcoal";
+const pressable =
+  "cursor-pointer transition-[background-color,scale] duration-150 ease-snappy motion-safe:active:scale-[0.97]";
+// The one strong action on the page: a peach brick with a clay side and four
+// studs on top. Pressing (or marking) seats it: it drops 4px onto its side.
+const brickButton = `relative mt-2 inline-flex min-h-[50px] cursor-pointer items-center justify-center gap-2 rounded-[4px] bg-peach px-6 text-base font-semibold text-charcoal shadow-[0_5px_0_var(--color-clay)] transition-[translate,box-shadow,background-color] duration-[120ms] ease-snappy hover:bg-[#f4d6b8] active:shadow-[0_1px_0_var(--color-clay)] motion-safe:active:translate-y-1 aria-busy:cursor-wait aria-busy:shadow-[0_1px_0_var(--color-clay)] motion-safe:aria-busy:translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-[7px] focus-visible:outline-charcoal`;
+// Quieter actions: a soft honey tint.
+const softButton = `${pressable} inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-honey/16 px-6 text-base font-semibold text-charcoal hover:bg-honey/26 ${focusRing}`;
+const label = "text-xs font-semibold tracking-[0.13em] text-dusk uppercase";
 
 export default function ImageUpload() {
   const [imageURL, setImageURL] = useState<string | null>(null);
@@ -117,46 +129,44 @@ export default function ImageUpload() {
     setIsSample(true);
   };
 
+
   return (
     <div className="grid gap-12">
       <div className="grid gap-10">
-        {/* The quick path. A stamp-edged sheet, like the landing page's cards. */}
-        <div className="paper-shadow">
-          <section className="stamp-edge flex flex-col gap-6 bg-paper p-7 sm:p-9 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-semibold tracking-wide text-rust uppercase">
-                No code needed
-              </p>
-              <h2 className="mt-2 font-display text-2xl leading-tight font-medium">
-                See it in one click
-              </h2>
-              <p className="mt-2 max-w-[46ch] leading-relaxed text-ink/80">
-                A Year 4 fractions sheet Fawna has already marked. See each
-                answer checked and the skill behind every mistake.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSample}
-              className={`${honeyButton} min-h-12 w-full shrink-0 px-6 md:w-auto`}
-            >
-              Try a sample worksheet
-              <span aria-hidden>→</span>
-            </button>
-          </section>
-        </div>
+        {/* The quick path: a slim ruled row, no card. */}
+        <section className="flex flex-col gap-5 border-y border-charcoal/16 py-6 md:flex-row md:items-center md:justify-between md:gap-10">
+          <div>
+            <p className={label}>No code needed</p>
+            <h2 className="mt-2 text-[22px] leading-tight font-semibold tracking-[-0.01em]">
+              See it in one click
+            </h2>
+            <p className="mt-1.5 max-w-[50ch] leading-relaxed text-dusk">
+              A Year 4 fractions sheet Fawna has already marked. See each
+              answer checked and the skill behind every mistake.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSample}
+            className={`${softButton} w-full shrink-0 md:w-auto`}
+          >
+            Try a sample worksheet
+            <ArrowIcon />
+          </button>
+        </section>
 
+        {/* The full path, on one white stamp-edged card like the explanation cards. */}
         <div className="paper-shadow">
-          <section className="stamp-edge bg-paper p-7 sm:p-9">
-            <h2 className="font-display text-2xl leading-tight font-medium">
+          <section className="stamp-edge bg-white p-7 sm:p-9">
+            <h2 className="text-2xl leading-tight font-semibold tracking-[-0.01em]">
               Mark your own
             </h2>
-            <p className="mt-2 leading-relaxed text-ink/80">
+            <p className="mt-1.5 leading-relaxed text-dusk">
               Three small steps. Take your time.
             </p>
 
             <ol className="mt-8 grid gap-8">
-              <li className="grid grid-cols-[1.75rem_1fr] gap-3">
+              <li className="grid grid-cols-[30px_1fr] gap-x-3.5">
                 <StepNumber>1</StepNumber>
                 <label className="grid max-w-sm gap-1.5 text-sm font-semibold">
                   Demo code
@@ -166,12 +176,12 @@ export default function ImageUpload() {
                     onChange={(e) => setDemoCode(e.target.value)}
                     autoComplete="off"
                     placeholder="From your invite email"
-                    className="min-h-11 rounded-md border-[1.5px] border-ink/30 bg-white px-3 text-base font-normal transition-[border-color,box-shadow] duration-150 ease-snappy placeholder:text-ink/40 focus:border-olive focus:ring-3 focus:ring-olive/20 focus:outline-none"
+                    className="min-h-11 rounded-lg border border-charcoal/20 bg-white px-3 text-base font-normal transition-[border-color,box-shadow] duration-150 ease-snappy placeholder:text-dusk/70 focus:border-honey-deep focus:ring-3 focus:ring-honey/25 focus:outline-none"
                   />
                 </label>
               </li>
 
-              <li className="grid grid-cols-[1.75rem_1fr] gap-3">
+              <li className="grid grid-cols-[30px_1fr] gap-x-3.5">
                 <StepNumber>2</StepNumber>
                 <div className="grid gap-1.5">
                   <p className="text-sm font-semibold">Worksheet photo</p>
@@ -183,7 +193,7 @@ export default function ImageUpload() {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     data-dragging={isDragging || undefined}
-                    className="pixel-grid relative grid min-h-64 cursor-pointer place-items-center overflow-hidden rounded-md border-2 border-dashed border-ink/25 bg-linen/60 transition-[border-color,background-color] duration-150 ease-[ease] hover:border-ink/50 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-espresso data-dragging:border-honey data-dragging:bg-honey/15"
+                    className="group relative grid min-h-64 cursor-pointer place-items-center overflow-hidden rounded-xl border-[1.5px] border-dashed border-charcoal/20 bg-canvas transition-[border-color,background-color] duration-150 ease-[ease] hover:border-charcoal/40 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-charcoal data-dragging:border-honey-deep data-dragging:bg-honey/10"
                   >
                     <input
                       type="file"
@@ -200,19 +210,26 @@ export default function ImageUpload() {
                           fill
                           className="object-contain p-3 pb-14 motion-safe:animate-fade"
                         />
-                        <span className="absolute bottom-3 rounded-md border-[1.5px] border-espresso bg-white px-3 py-1 text-sm font-semibold shadow-[2px_2px_0_var(--color-espresso)]">
+                        <span className="absolute bottom-3 rounded-full border border-charcoal/16 bg-white px-3.5 py-1.5 text-sm font-semibold shadow-sm">
                           Change photo
                         </span>
                       </>
                     ) : (
-                      <span className="grid justify-items-center gap-3 p-6 text-center">
-                        <PixelSheet />
-                        <span className="font-display text-lg font-medium">
+                      <span className="grid justify-items-center gap-2.5 p-6 text-center">
+                        {/* Fawna's bricks, at rest. The top one lifts a little on hover,
+                          and higher while a photo is dragged over: "ready for it". */}
+                        <BuildingBricks
+                          still
+                          className="mb-1 w-[104px]"
+                          liftClassName="motion-safe:group-hover:-translate-y-1.5 motion-safe:group-data-dragging:-translate-y-4"
+                          shadowClassName="group-hover:opacity-[0.05] group-data-dragging:opacity-[0.1]"
+                        />
+                        <span className="text-lg font-semibold">
                           {isDragging
                             ? "Let go to add it"
                             : "Drop the worksheet here"}
                         </span>
-                        <span className="text-sm text-ink/60">
+                        <span className="text-sm text-dusk">
                           or tap to choose a photo · JPEG, PNG or WebP, under 10
                           MB
                         </span>
@@ -222,21 +239,43 @@ export default function ImageUpload() {
                 </div>
               </li>
 
-              <li className="grid grid-cols-[1.75rem_1fr] gap-3">
+              <li className="grid grid-cols-[30px_1fr] gap-x-3.5">
                 <StepNumber>3</StepNumber>
-                <div className="grid justify-items-start gap-3">
+                <div className="grid justify-items-start gap-4">
                   <button
                     type="button"
                     onClick={handleAnalyze}
                     disabled={isMarking}
                     aria-busy={isMarking}
-                    className={`${oliveButton} min-h-12 w-full px-6 sm:w-auto disabled:cursor-wait disabled:opacity-80 disabled:active:scale-100`}
+                    className={`group ${brickButton}`}
                   >
-                    {isMarking && <PixelSnake />}
-                    {isMarking
-                      ? "Fawna is marking… this can take a minute"
-                      : "Mark worksheet"}
+                    {/* Four studs along the top edge. While marking they light up in turn. */}
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-3.5 -top-[7px] flex justify-between"
+                    >
+                      {[0, 1, 2, 3].map((i) => (
+                        <span
+                          key={i}
+                          style={{ animationDelay: `${i * 150}ms` }}
+                          className="h-[7px] w-[18px] rounded-t-[3px] bg-peach shadow-[inset_0_2px_0_rgb(255_255_255/0.22)] motion-safe:group-aria-busy:animate-stud"
+                        />
+                      ))}
+                    </span>
+                    {isMarking ? "Marking…" : "Mark worksheet"}
                   </button>
+                  {/* Same building bricks as the card loader: one "working on it" picture. */}
+                  {isMarking && (
+                    <div
+                      role="status"
+                      className="flex items-center gap-4 motion-safe:animate-fade"
+                    >
+                      <BuildingBricks className="w-[72px] shrink-0" />
+                      <span className="shimmer-text text-[15px] font-semibold">
+                        Fawna is marking… this can take a minute
+                      </span>
+                    </div>
+                  )}
                   {error && (
                     <p
                       role="alert"
@@ -249,8 +288,7 @@ export default function ImageUpload() {
               </li>
             </ol>
 
-            <div aria-hidden className="pixel-trail mt-10" />
-            <p className="mt-4 text-sm leading-relaxed text-ink/60">
+            <p className="mt-10 border-t border-charcoal/16 pt-5 text-sm leading-relaxed text-dusk">
               This is a demo. Please don’t upload photos that show a child’s
               name or face. Photos are sent to OpenAI to be marked and are not
               saved by Fawna.
@@ -266,14 +304,10 @@ export default function ImageUpload() {
           key={`${isSample}-${summary.message}`}
           aria-live="polite"
           // Fade only; the rows inside rise, so the movement isn't doubled.
-          // scroll-mt leaves a little paper above the results after scrolling.
+          // scroll-mt leaves a little room above the results after scrolling.
           className="scroll-mt-8 animate-fade"
         >
-          {isSample && (
-            <p className="mb-3 text-sm font-semibold tracking-wide text-rust uppercase">
-              Sample result
-            </p>
-          )}
+          {isSample && <p className={`mb-4 ${label}`}>Sample result</p>}
           <ResultsList
             summary={summary}
             explanations={isSample ? SAMPLE_EXPLANATIONS : undefined}
@@ -285,55 +319,31 @@ export default function ImageUpload() {
   );
 }
 
-// One PRACTICE cube: honey front, espresso outline, brick side as a hard shadow.
+// A step number: the same thin circle as the card stepper.
 function StepNumber({ children }: { children: React.ReactNode }) {
   return (
     <span
       aria-hidden
-      className="mt-0.5 grid size-7 place-items-center border-[1.5px] border-espresso bg-honey font-display text-sm font-semibold text-espresso shadow-[2px_2px_0_var(--color-brick)]"
+      className="grid size-[30px] place-items-center rounded-full border border-charcoal/16 text-sm font-semibold text-dusk tabular-nums"
     >
       {children}
     </span>
   );
 }
 
-// Functional: shows the AI is still working. Three pixels hop across a
-// 48px track, honey head in front. Reduced motion: the snake sits still.
-function PixelSnake() {
-  return (
-    <span aria-hidden className="relative h-[5px] w-12 overflow-hidden">
-      <span className="absolute inset-y-0 left-0 flex gap-px motion-safe:animate-snake">
-        <span className="size-[5px] bg-linen/50" />
-        <span className="size-[5px] bg-linen/80" />
-        <span className="size-[5px] bg-honey" />
-      </span>
-    </span>
-  );
-}
-
-// A blank worksheet drawn in pixels: white sheet, honey lines of writing.
-function PixelSheet() {
+function ArrowIcon() {
   return (
     <svg
       aria-hidden
-      width="48"
-      height="56"
-      viewBox="0 0 12 14"
-      shapeRendering="crispEdges"
+      viewBox="0 0 20 20"
+      className="size-[1em] text-honey-deep"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <rect
-        x="0.5"
-        y="0.5"
-        width="11"
-        height="13"
-        fill="white"
-        stroke="var(--color-espresso)"
-        strokeWidth="1.5"
-        vectorEffect="non-scaling-stroke"
-      />
-      <rect x="2" y="3" width="7" height="1" fill="var(--color-honey)" />
-      <rect x="2" y="6" width="5" height="1" fill="var(--color-honey)" />
-      <rect x="2" y="9" width="6" height="1" fill="var(--color-honey)" />
+      <path d="M3.5 10h13M11 4.5l5.5 5.5-5.5 5.5" />
     </svg>
   );
 }

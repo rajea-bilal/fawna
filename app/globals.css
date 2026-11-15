@@ -12,6 +12,7 @@
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-fraunces);
   --font-hand: var(--font-patrick-hand);
+  --font-ui: var(--font-inter-tight);
 }
 
 /* Fawna brand palette, sampled from the hero artwork. Every colour is
@@ -72,6 +73,86 @@
   --color-peach: #f2d0b0; /* collage paper */
   --color-print: #1e1915; /* collage ink line */
   --color-print-orange: #e86748; /* collage panels */
+
+  /* Upload and results page (issue #18). Lighter and softer than the
+     landing page: no stark black, no rust. */
+  --color-canvas: #fdfbf7; /* page background */
+  --color-charcoal: #3b302b; /* text */
+  --color-dusk: #665850; /* secondary text, labels, quiet icons */
+  --color-clay: #c96a4b; /* mistake marks and numbers (icons and large text only) */
+  --color-honey-deep: #d9953a; /* arrow on the soft honey button */
+
+  /* Two line-drawn bricks while cards are written: the top one lifts off
+     and settles back. Moving on screen, so ease-in-out. */
+  --animate-brick-lift: brick-lift 1.5s cubic-bezier(0.77, 0, 0.175, 1) infinite alternate;
+  --animate-brick-shadow: brick-shadow 1.5s cubic-bezier(0.77, 0, 0.175, 1) infinite alternate;
+  /* The "worked through" postmark lands like a rubber stamp, once. */
+  --animate-stamp: stamp 440ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  /* The brick button's studs light up in turn while Fawna marks. Stepped,
+     like the landing page snake; each stud gets its own delay. */
+  --animate-stud: stud 1.2s steps(1) infinite;
+
+  @keyframes stud {
+    0% {
+      background-color: var(--color-clay);
+    }
+    40%,
+    100% {
+      background-color: var(--color-peach);
+    }
+  }
+
+  @keyframes brick-lift {
+    to {
+      transform: translateY(-16px);
+    }
+  }
+  @keyframes brick-shadow {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 0.09;
+      transform: scale(0.8);
+    }
+  }
+  @keyframes stamp {
+    from {
+      opacity: 0;
+      transform: scale(1.45) rotate(-2deg);
+    }
+  }
+}
+
+/* Status text with a soft light passing through it, while the AI writes.
+   Reduced motion: plain text. */
+@utility shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--color-dusk) 40%,
+    #d9cfc6 50%,
+    var(--color-dusk) 60%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.2s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background: none;
+    color: var(--color-dusk);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
 }
 
 /* Hero readability veil. On phones a shadow rises from the floor to meet
