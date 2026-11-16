@@ -22,7 +22,8 @@ const pressable =
 const softButton = `${pressable} inline-flex min-h-12 items-center justify-center gap-2 rounded-[4px] bg-honey/16 px-6 text-base font-semibold text-charcoal hover:bg-honey/26 ${focusRing}`;
 const label = "text-xs font-semibold tracking-[0.13em] text-dusk uppercase";
 
-export default function ImageUpload() {
+// The page's intro is passed in so it can hide with the form once results show.
+export default function ImageUpload({ intro }: { intro?: React.ReactNode }) {
   const [imageURL, setImageURL] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [demoCode, setDemoCode] = useState("");
@@ -31,19 +32,63 @@ export default function ImageUpload() {
   const [isSample, setIsSample] = useState(false);
   const [isMarking, setIsMarking] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const resultsRef = useRef<HTMLElement>(null);
+  // Did we add a "?view=results" history entry? Then Back returns to the form.
+  const pushedResultsRef = useRef(false);
+  const showingResults = summary !== null;
 
-  // Results land below the fold, so bring them into view when they arrive
-  // (sample or live). An effect, not the click handler: the section only
-  // exists after React renders the new summary. Reduced motion: jump, no glide.
+  // Results and the form are two views of this page (issue #18). Each starts at the top.
+  // An effect, not the click handler: the new view only exists after React renders it.
   useEffect(() => {
-    if (!summary) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    resultsRef.current?.scrollIntoView({
-      behavior: reduce ? "auto" : "smooth",
-      block: "start",
-    });
-  }, [summary]);
+    window.scrollTo({ top: 0 });
+  }, [showingResults]);
+
+  // The browser's Back button leaves the results and returns to the form.
+  useEffect(() => {
+    const dropStaleResultsAddress = () => {
+      // Results live in memory only, so a refresh (or Forward) on "?view=results"
+      // has nothing to show. Go back to the plain form address.
+      if (!pushedResultsRef.current && new URLSearchParams(window.location.search).get("view") === "results") {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    };
+    dropStaleResultsAddress();
+
+    const onPopState = () => {
+      if (new URLSearchParams(window.location.search).get("view") !== "results") {
+        pushedResultsRef.current = false;
+        setSummary(null);
+        setIsSample(false);
+      }
+      dropStaleResultsAddress();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  // Switch to the results view, adding one history entry so Back works.
+  const showResults = (next: WorksheetSummary, sample: boolean) => {
+    setSummary(next);
+    setIsSample(sample);
+    if (!pushedResultsRef.current) {
+      window.history.pushState(null, "", "?view=results");
+      pushedResultsRef.current = true;
+    }
+  };
+
+  // Back to the form. A marked photo is done with, so it's cleared;
+  // a photo added before trying the sample is kept.
+  const markAnother = () => {
+    if (!isSample) {
+      setImageURL(null);
+      setUploadedFile(null);
+    }
+    if (pushedResultsRef.current) {
+      window.history.back(); // onPopState clears the results
+    } else {
+      setSummary(null);
+      setIsSample(false);
+    }
+  };
 
   // One path for both ways in: the file picker and drag-and-drop.
   const handleFile = async (file: File | undefined) => {
@@ -111,8 +156,7 @@ export default function ImageUpload() {
         setError(data.message ?? "Something went wrong. Please try again.");
         return;
       }
-      setSummary(data);
-      setIsSample(false);
+      showResults(data, false);
     } catch {
       setError("We couldn't reach Fawna. Check your connection and try again.");
     } finally {
@@ -123,14 +167,39 @@ export default function ImageUpload() {
   // No AI call: the saved result goes through the same counting as a live one.
   const handleSample = () => {
     setError(null);
-    setSummary(summariseResult(SAMPLE_RESULT));
-    setIsSample(true);
+    showResults(summariseResult(SAMPLE_RESULT), true);
   };
 
+  // Results view: the form and intro step aside so the results get the whole page.
+  // Leaving this view unmounts ResultsList, which stops any explain call still running.
+  if (summary) {
+    return (
+      <section
+        // A new key replays the entrance when the result changes.
+        key={`${isSample}-${summary.message}`}
+        aria-live="polite"
+        className="pt-8 animate-fade sm:pt-12"
+      >
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <p className={label}>{isSample ? "Sample worksheet" : "Your worksheet"}</p>
+          <button type="button" onClick={markAnother} className={softButton}>
+            <ArrowIcon className="rotate-180" />
+            Mark another sheet
+          </button>
+        </div>
+        <ResultsList
+          summary={summary}
+          explanations={isSample ? SAMPLE_EXPLANATIONS : undefined}
+          demoCode={isSample ? undefined : demoCode.trim()}
+        />
+      </section>
+    );
+  }
 
   return (
-    <div className="grid gap-12">
-      <div className="grid gap-10">
+    <div>
+      {intro}
+      <div className="mt-12 grid gap-10">
         {/* The quick path: a slim ruled row, no card. */}
         <section className="flex flex-col gap-5 border-y border-charcoal/16 py-6 md:flex-row md:items-center md:justify-between md:gap-10">
           <div>
@@ -176,7 +245,7 @@ export default function ImageUpload() {
                     onChange={(e) => setDemoCode(e.target.value)}
                     autoComplete="off"
                     placeholder="From your invite email"
-                    className="min-h-11 rounded-lg border border-charcoal/20 bg-white px-3 text-base font-normal transition-[border-color,box-shadow] duration-150 ease-snappy placeholder:text-dusk/70 focus:border-honey-deep focus:ring-3 focus:ring-honey/25 focus:outline-none"
+                    className="min-h-11 rounded-[4px] border border-charcoal/20 bg-white px-3 text-base font-normal text-charcoal autofill:shadow-[inset_0_0_0_1000px_white] autofill:[-webkit-text-fill-color:var(--color-charcoal)] transition-[border-color,box-shadow] duration-150 ease-snappy placeholder:text-dusk/70 focus:border-honey-deep focus:ring-3 focus:ring-honey/25 focus:outline-none"
                   />
                 </label>
               </li>
@@ -285,25 +354,6 @@ export default function ImageUpload() {
           </section>
         </div>
       </div>
-
-      {summary && (
-        <section
-          ref={resultsRef}
-          // A new key replays the entrance when the result changes.
-          key={`${isSample}-${summary.message}`}
-          aria-live="polite"
-          // Fade only; the rows inside rise, so the movement isn't doubled.
-          // scroll-mt leaves a little room above the results after scrolling.
-          className="scroll-mt-8 animate-fade"
-        >
-          {isSample && <p className={`mb-4 ${label}`}>Sample result</p>}
-          <ResultsList
-            summary={summary}
-            explanations={isSample ? SAMPLE_EXPLANATIONS : undefined}
-            demoCode={isSample ? undefined : demoCode.trim()}
-          />
-        </section>
-      )}
     </div>
   );
 }
@@ -320,12 +370,12 @@ function StepNumber({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ArrowIcon() {
+function ArrowIcon({ className = "" }: { className?: string }) {
   return (
     <svg
       aria-hidden
       viewBox="0 0 20 20"
-      className="size-[1em] text-honey-deep"
+      className={`size-[1em] text-honey-deep ${className}`}
       fill="none"
       stroke="currentColor"
       strokeWidth="2.2"

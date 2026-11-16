@@ -93,19 +93,21 @@ function Summary({
   return (
     <section
       aria-labelledby="summary-heading"
-      className="grid gap-10 border-b border-charcoal/16 pb-10 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:items-end md:gap-x-16"
+      className="grid gap-10 border-b border-charcoal/16 pb-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-16"
     >
-      <div>
+      <div className="min-w-0">
         <h2 id="summary-heading" className={label}>
           {summary.questions.length} questions marked
         </h2>
         <p className="sr-only">{summary.message}</p>
 
-        <div className="mt-5 flex items-end gap-6">
+        {/* The score on its own line, then the counts in a row under it,
+          so a two-digit score never pushes into the skills column. */}
+        <div className="mt-5">
           {checked > 0 ? (
             <p
               aria-hidden
-              className="flex items-end text-[clamp(112px,19vw,200px)] leading-[0.74] font-medium tracking-[-0.055em] tabular-nums"
+              className="flex items-end text-[clamp(104px,16vw,184px)] leading-[0.74] font-medium tracking-[-0.055em] tabular-nums"
             >
               <span>{summary.correct}</span>
               <span className="ml-[0.06em] text-[0.4em] leading-[0.9] tracking-[-0.02em] text-dusk">
@@ -115,11 +117,11 @@ function Summary({
           ) : (
             <p className="text-2xl leading-snug font-semibold">Fawna couldn’t read this sheet.</p>
           )}
-          <dl className="grid min-w-0 flex-1">
+          <dl className="mt-8 grid grid-cols-3 border-y border-charcoal/16">
             {counts.map((count) => (
               <div
                 key={count.result}
-                className="flex items-baseline gap-2.5 border-t border-charcoal/16 py-[7px] last:border-b"
+                className="flex min-w-0 flex-col gap-2 border-l border-charcoal/16 py-3.5 pl-4 first:border-l-0 first:pl-0"
               >
                 <dt className={`order-2 flex items-center gap-1.5 ${label}`}>
                   <Mark result={count.result} className="text-[15px]" />
@@ -227,7 +229,7 @@ function AnswerPair({ card, result }: { card: ExplanationCard; result: Result })
   return (
     <dl className="mt-3.5 grid grid-cols-2 border-t border-charcoal/16">
       <div className="min-w-0 pt-2.5">
-        <dt className={`flex items-center gap-1.5 ${label}`}>
+        <dt className={`flex items-center gap-1.5 whitespace-nowrap ${label}`}>
           <Mark result={result} className="text-sm" />
           You wrote
         </dt>
@@ -240,7 +242,7 @@ function AnswerPair({ card, result }: { card: ExplanationCard; result: Result })
         </dd>
       </div>
       <div className="min-w-0 border-l border-charcoal/16 pt-2.5 pl-4">
-        <dt className={`flex items-center gap-1.5 ${label}`}>
+        <dt className={`flex items-center gap-1.5 whitespace-nowrap ${label}`}>
           <Icon name="check" className="text-sm text-olive" />
           Should be
         </dt>
@@ -298,7 +300,7 @@ function ExplainedCard({
 
   return (
     <article
-      className={`relative mt-[10px] mr-[7px] rounded-[3px] border border-charcoal bg-white p-6 transition-[translate,box-shadow] duration-[260ms] ease-snappy sm:p-7 ${done ? "shadow-[3px_3px_0_var(--color-olive-soft)] motion-safe:translate-x-1 motion-safe:translate-y-1" : "shadow-[7px_7px_0_var(--color-peach)]"}`}
+      className={`@container relative mt-[10px] mr-[7px] rounded-[3px] border border-charcoal bg-white p-6 transition-[translate,box-shadow] duration-[260ms] ease-snappy sm:p-7 ${done ? "shadow-[3px_3px_0_var(--color-olive-soft)] motion-safe:translate-x-1 motion-safe:translate-y-1" : "shadow-[7px_7px_0_var(--color-peach)]"}`}
     >
       <CardStuds />
       <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${label}`}>
@@ -323,7 +325,7 @@ function ExplainedCard({
           aria-controls={bodyId}
           className={`mt-1 flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-md text-left ${focusRing}`}
         >
-          <span className={`leading-tight font-semibold tracking-[-0.01em] text-balance ${open ? "text-2xl lg:text-[28px]" : "text-[22px]"}`}>
+          <span className={`leading-tight font-semibold tracking-[-0.01em] text-balance ${open ? "text-2xl @xl:text-[28px]" : "text-[22px]"}`}>
             {card.title}
           </span>
           <Icon
@@ -333,9 +335,10 @@ function ExplainedCard({
         </button>
       </h3>
 
-      {/* On wide screens closed cards fold to their title, so the open one has room. */}
+      {/* A wide open card (576px+) puts the question beside the answers.
+        @xl is a container query: it reads the card's width, not the screen's. */}
       <div
-        className={`mt-2.5 ${open ? "lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-end lg:gap-x-9" : "lg:hidden"}`}
+        className={`mt-2.5 ${open ? "@xl:grid @xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @xl:items-end @xl:gap-x-9" : ""}`}
       >
         <p className="text-lg leading-snug font-semibold tabular-nums">{card.question}</p>
         <AnswerPair card={card} result={result} />
@@ -344,14 +347,14 @@ function ExplainedCard({
       {open && (
         <div
           id={bodyId}
-          className="mt-5 border-t border-dashed border-charcoal/16 pt-4 motion-safe:animate-rise motion-reduce:animate-fade lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:content-start lg:gap-x-9"
+          className="mt-5 border-t border-dashed border-charcoal/16 pt-4 motion-safe:animate-rise motion-reduce:animate-fade @xl:grid @xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @xl:content-start @xl:gap-x-9"
         >
-          <div className="lg:col-start-1">
-            <p className={label}>What went wrong</p>
+          <div className="@xl:col-start-1">
+            <p className={`whitespace-nowrap ${label}`}>What went wrong</p>
             <p className="mt-1.5 text-[15px] leading-relaxed text-dusk">{card.whatWentWrong}</p>
           </div>
 
-          <div className="mt-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
+          <div className="mt-6 @xl:col-start-2 @xl:row-span-2 @xl:row-start-1 @xl:mt-0">
             <p className={`${label} tabular-nums`}>
               {done ? `All ${total} steps` : `Step ${step + 1} of ${total}`}
             </p>
@@ -432,7 +435,7 @@ function ExplainedCard({
           </div>
 
           {/* For the grown-up, not the child: tucked away until asked for. */}
-          <div className="mt-6 border-t border-charcoal/16 lg:col-start-1">
+          <div className="mt-6 border-t border-charcoal/16 @xl:col-start-1">
             <button
               type="button"
               onClick={() => setTipOpen((o) => !o)}
@@ -671,7 +674,7 @@ export default function ResultsList({
     requestAnimationFrame(() =>
       document
         .getElementById(`card-${key}`)
-        ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center", inline: "start" }),
+        ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest", inline: "start" }),
     );
   };
 
@@ -744,7 +747,9 @@ export default function ResultsList({
             </p>
           )}
 
-          <ol className="-mx-5 flex snap-x snap-mandatory scroll-px-5 items-start gap-4 overflow-x-auto overscroll-x-contain px-5 pt-3.5 pb-6 [scrollbar-width:none] sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:mx-0 lg:snap-none lg:gap-6 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden">
+          {/* Phones: cards stack top to bottom. Tablet and up: one sideways row,
+            closed cards 340px, the open one wider. */}
+          <ol className="flex flex-col gap-7 pt-3.5 pb-6 md:-mx-8 md:snap-x md:snap-mandatory md:scroll-px-8 md:flex-row md:items-start md:gap-6 md:overflow-x-auto md:overscroll-x-contain md:px-8 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden lg:[scrollbar-color:rgb(59_48_43/0.25)_transparent] lg:[scrollbar-width:thin]">
             {cards.map((card, index) => {
               const gap = summary.skillGaps.find((g) => g.key === card.key);
               const open = activeKey === card.key;
@@ -754,7 +759,7 @@ export default function ResultsList({
                   id={`card-${card.key}`}
                   // Saved cards all arrive at once, so stagger them. Live cards already arrive one by one.
                   style={isSample ? { animationDelay: `${Math.min(index, 10) * 120}ms` } : undefined}
-                  className={`w-[min(86%,360px)] shrink-0 snap-start motion-safe:animate-rise motion-reduce:animate-fade lg:w-auto lg:min-w-0 lg:shrink lg:basis-0 ${open ? "lg:grow-[2.5]" : "lg:grow"}`}
+                  className={`w-full motion-safe:animate-rise motion-reduce:animate-fade md:shrink-0 md:snap-start ${open ? "md:w-[min(92%,700px)]" : "md:w-[340px]"}`}
                 >
                   <div
                     className={`transition-[translate,rotate] duration-200 ease-snappy ${open ? "" : "motion-safe:hover:-translate-y-1 motion-safe:hover:-rotate-[0.4deg]"}`}
@@ -766,7 +771,7 @@ export default function ResultsList({
                         open={open}
                         done={doneKeys.includes(card.key)}
                         hasNextCard={nextUndone(card.key) !== undefined}
-                        onToggle={() => setOpenKey(open ? null : card.key)}
+                        onToggle={() => (open ? setOpenKey(null) : openCard(card.key))}
                         onDone={(done) => setDone(card.key, done)}
                         onNextCard={() => {
                           const next = nextUndone(card.key);
@@ -781,7 +786,7 @@ export default function ResultsList({
               );
             })}
             {status === "loading" && (
-              <li className="w-[min(86%,360px)] shrink-0 snap-start lg:w-auto lg:min-w-0 lg:shrink lg:grow lg:basis-0">
+              <li className="w-full md:w-[340px] md:shrink-0 md:snap-start">
                 <WritingCard
                   cardNumber={Math.min(cards.length + 1, Math.max(explainable.length, 1))}
                   total={Math.max(explainable.length, 1)}

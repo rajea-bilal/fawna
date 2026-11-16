@@ -11,11 +11,12 @@ export const brickButton =
 // Put inside a `relative` card that has about 10px of room above it.
 export function CardStuds({ dashed = false }: { dashed?: boolean }) {
   return (
-    <span aria-hidden className="pointer-events-none absolute -top-[10px] left-[22px] flex gap-[9px]">
+    // Studs shrink on a narrow card instead of hanging past its edge.
+    <span aria-hidden className="pointer-events-none absolute -top-[10px] right-[22px] left-[22px] flex gap-[9px]">
       {[0, 1, 2, 3].map((i) => (
         <span
           key={i}
-          className={`block h-[10px] w-8 rounded-t-[4px] border border-b-0 bg-white ${dashed ? "border-dashed border-charcoal/35" : "border-charcoal"}`}
+          className={`block h-[10px] max-w-8 min-w-3 flex-1 rounded-t-[4px] border border-b-0 bg-white ${dashed ? "border-dashed border-charcoal/35" : "border-charcoal"}`}
         />
       ))}
     </span>

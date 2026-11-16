@@ -24,25 +24,26 @@ export default function UploadPage() {
       </div>
 
       <main className="mx-auto w-full max-w-5xl px-5 pb-20 sm:px-8">
-        <div className="pt-10 sm:pt-14">
-          <p className="text-xs font-semibold tracking-[0.13em] text-dusk uppercase">
-            Pull up a chair
-          </p>
-          <h1 className="mt-3 text-[clamp(2.25rem,1.5rem+3vw,3.75rem)] leading-[1.04] font-semibold tracking-[-0.035em] text-balance">
-            Find their next step
-          </h1>
-          <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-dusk">
-            Show Fawna a finished maths worksheet. Together you’ll see what
-            went well, and the exact skill behind each mistake.
-          </p>
-          <p className="mt-2 text-sm text-dusk">
-            Maths today. English vocabulary, synonyms and antonyms next.
-          </p>
-        </div>
-
-        <div className="mt-12">
-          <ImageUpload />
-        </div>
+        {/* The intro shows with the form and steps aside with it once results appear. */}
+        <ImageUpload
+          intro={
+            <div className="pt-10 sm:pt-14">
+              <p className="text-xs font-semibold tracking-[0.13em] text-dusk uppercase">
+                Pull up a chair
+              </p>
+              <h1 className="mt-3 text-[clamp(2.25rem,1.5rem+3vw,3.75rem)] leading-[1.04] font-semibold tracking-[-0.035em] text-balance">
+                Find their next step
+              </h1>
+              <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-dusk">
+                Show Fawna a finished maths worksheet. Together you’ll see what
+                went well, and the exact skill behind each mistake.
+              </p>
+              <p className="mt-2 text-sm text-dusk">
+                Maths today. English vocabulary, synonyms and antonyms next.
+              </p>
+            </div>
+          }
+        />
       </main>
     </div>
   );
