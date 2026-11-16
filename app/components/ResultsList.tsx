@@ -1,246 +1,561 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MATH_CATEGORIES } from "@/lib/ai/mathSkills";
 import type { ExplanationCard } from "@/lib/ai/explanationSchema";
 import { readExplainStream } from "@/lib/ai/readExplainStream";
 import type { MarkedQuestion } from "@/lib/ai/worksheetSchema";
 import type { WorksheetSummary } from "@/lib/ai/summariseResult";
 import type { SkillGap } from "@/lib/ai/groupSkillGaps";
+import BuildingBricks from "./BuildingBricks";
+import { BrickStuds, CardStuds, brickButton } from "./brickButton";
 
-// Skill id → readable name, built once from the fixed skill list.
-const SKILL_NAMES = new Map(
-  MATH_CATEGORIES.flatMap((category) =>
-    category.skills.map((skill) => [skill.id, skill.name] as const),
-  ),
-);
+// Results page design: issue #18. A magazine-style opener (big score, a ruled
+// list of skills) above a row of cards the child works through one step at a time.
 
-const RESULT_LABELS: Record<MarkedQuestion["result"], string> = {
+type Result = MarkedQuestion["result"];
+type ExplainedCardData = Extract<ExplanationCard, { status: "explained" }>;
+type FailedCardData = Extract<ExplanationCard, { status: "failed" }>;
+
+const RESULT_LABELS: Record<Result, string> = {
   correct: "Correct",
-  incorrect: "To work on",
-  blank: "Not answered",
-  unreadable: "Couldn't read",
+  incorrect: "Mistake",
+  blank: "Left blank",
+  unreadable: "Couldn’t read",
 };
 
-function skillName(question: MarkedQuestion): string | null {
-  if (!("skill" in question)) return null;
-  const { skill } = question;
-  return skill.source === "list"
-    ? (SKILL_NAMES.get(skill.skillId) ?? skill.skillId)
-    : skill.name;
-}
+// Small stroke icons. Each mark pairs with a word, so colour is never the only signal.
+const ICON_PATHS = {
+  check: "M4 10.5l4 4 8-9",
+  cross: "M5 5l10 10M15 5L5 15",
+  dash: "M5 10h10",
+  question: "M7.6 7.6a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5v.5M10 14.6v.1",
+  arrow: "M3.5 10h13M11 4.5l5.5 5.5-5.5 5.5",
+  chevron: "M5.5 8l4.5 4.5L14.5 8",
+} as const;
 
-// A teacher's mark in the margin: olive tick, terracotta cross, ink dash.
-function Mark({ result }: { result: MarkedQuestion["result"] }) {
-  const tone =
-    result === "correct"
-      ? "bg-olive text-linen"
-      : result === "incorrect"
-        ? "bg-terracotta text-linen"
-        : "border-2 border-dashed border-ink/25 text-ink/50";
-  const symbol = result === "correct" ? "✓" : result === "incorrect" ? "✗" : "–";
+function Icon({ name, className = "" }: { name: keyof typeof ICON_PATHS; className?: string }) {
   return (
-    <span
+    <svg
       aria-hidden
-      className={`grid size-8 shrink-0 place-items-center rounded-full text-base font-bold ${tone}`}
+      viewBox="0 0 20 20"
+      className={`size-[1em] shrink-0 ${className}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={name === "chevron" ? 1.8 : 2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      {symbol}
-    </span>
+      <path d={ICON_PATHS[name]} />
+    </svg>
   );
 }
 
-// What the child needs help with, one row per skill gap, in sheet order (ADR-021).
-// Fact skills get no explanation (ADR-015), so they're marked "learn by heart" instead.
-function SkillGapList({ skillGaps }: { skillGaps: SkillGap[] }) {
+const MARKS: Record<Result, { icon: keyof typeof ICON_PATHS; tone: string }> = {
+  correct: { icon: "check", tone: "text-olive" },
+  incorrect: { icon: "cross", tone: "text-clay" },
+  blank: { icon: "dash", tone: "text-dusk" },
+  unreadable: { icon: "question", tone: "text-dusk" },
+};
+
+function Mark({ result, className = "" }: { result: Result; className?: string }) {
+  const { icon, tone } = MARKS[result];
+  return <Icon name={icon} className={`${tone} ${className}`} />;
+}
+
+const label = "text-xs font-semibold tracking-[0.13em] text-dusk uppercase";
+const focusRing =
+  "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-charcoal";
+const softButton = `inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[4px] bg-honey/16 px-[18px] text-[15px] font-semibold text-charcoal transition-[background-color,scale] duration-150 ease-snappy hover:bg-honey/26 active:scale-[0.97] ${focusRing}`;
+const quietButton = `inline-flex min-h-11 cursor-pointer items-center px-2.5 text-[15px] font-semibold text-dusk underline decoration-charcoal/25 underline-offset-4 hover:text-charcoal ${focusRing}`;
+
+// The top of the page: score, counts and the skills to practise (issue #18).
+// Unreadable questions are left out of the score: Fawna couldn't check them.
+function Summary({
+  summary,
+  doneKeys,
+  showCards,
+  canExplain,
+  onOpenCard,
+}: {
+  summary: WorksheetSummary;
+  doneKeys: string[];
+  showCards: boolean;
+  canExplain: boolean;
+  onOpenCard: (key: string) => void;
+}) {
+  const checked = summary.questions.length - summary.unreadable;
+  const counts = [
+    { result: "incorrect" as const, value: summary.incorrect, text: "Mistakes" },
+    { result: "blank" as const, value: summary.blank, text: "Left blank" },
+    { result: "unreadable" as const, value: summary.unreadable, text: "Couldn’t read" },
+  ].filter((count) => count.result !== "unreadable" || count.value > 0);
+
   return (
-    <section aria-labelledby="skill-gaps-heading" className="mt-6">
-      <h3 id="skill-gaps-heading" className="text-sm font-semibold tracking-wide text-rust uppercase">
-        Skill gaps
-      </h3>
-      <ul className="mt-3 space-y-2">
-        {skillGaps.map((gap) => (
-          <li
-            key={gap.key}
-            className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-lg bg-peach/30 px-4 py-2.5"
-          >
-            <span className="font-semibold">{gap.name}</span>
-            <span className="flex items-baseline gap-3 text-sm text-ink/70">
-              {gap.kind === "fact" && (
-                <span className="rounded-full bg-ink/8 px-2.5 py-0.5 font-semibold text-ink/70">
-                  learn by heart
-                </span>
-              )}
-              <span className="tabular-nums">
-                {gap.questions.length} {gap.questions.length === 1 ? "question" : "questions"}
+    <section
+      aria-labelledby="summary-heading"
+      className="grid gap-10 border-b border-charcoal/16 pb-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-x-16"
+    >
+      <div className="min-w-0">
+        <h2 id="summary-heading" className={label}>
+          {summary.questions.length} questions marked
+        </h2>
+        <p className="sr-only">{summary.message}</p>
+
+        {/* The score on its own line, then the counts in a row under it,
+          so a two-digit score never pushes into the skills column. */}
+        <div className="mt-5">
+          {checked > 0 ? (
+            <p
+              aria-hidden
+              className="flex items-end text-[clamp(104px,16vw,184px)] leading-[0.74] font-medium tracking-[-0.055em] tabular-nums"
+            >
+              <span>{summary.correct}</span>
+              <span className="ml-[0.06em] text-[0.4em] leading-[0.9] tracking-[-0.02em] text-dusk">
+                /{checked}
               </span>
-            </span>
-          </li>
-        ))}
-      </ul>
+            </p>
+          ) : (
+            <p className="text-2xl leading-snug font-semibold">Fawna couldn’t read this sheet.</p>
+          )}
+          <dl className="mt-8 grid grid-cols-3 border-y border-charcoal/16">
+            {counts.map((count) => (
+              <div
+                key={count.result}
+                className="flex min-w-0 flex-col gap-2 border-l border-charcoal/16 py-3.5 pl-4 first:border-l-0 first:pl-0"
+              >
+                <dt className={`order-2 flex items-center gap-1.5 ${label}`}>
+                  <Mark result={count.result} className="text-[15px]" />
+                  {count.text}
+                </dt>
+                <dd
+                  className={`min-w-[0.7em] text-[34px] leading-none font-semibold tracking-[-0.03em] tabular-nums ${count.result === "incorrect" && count.value > 0 ? "text-clay" : ""}`}
+                >
+                  {count.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        {summary.unreadable > 0 && checked > 0 && (
+          <p className="mt-5 max-w-[40ch] text-sm leading-relaxed text-dusk">
+            Fawna couldn’t read {summary.unreadable === 1 ? "one answer" : `${summary.unreadable} answers`}, so{" "}
+            {summary.unreadable === 1 ? "it isn’t" : "they aren’t"} in the score.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <h3 className={`${label} mb-2`}>Skills to practise</h3>
+        {summary.skillGaps.length === 0 ? (
+          <p className="border-y border-charcoal/16 py-4 leading-relaxed">
+            Nothing to practise. Every answer Fawna checked was right.
+          </p>
+        ) : (
+          <ul>
+            {summary.skillGaps.map((gap) => (
+              <SkillRow
+                key={gap.key}
+                gap={gap}
+                done={doneKeys.includes(gap.key)}
+                showCards={showCards}
+                canExplain={canExplain}
+                onOpenCard={onOpenCard}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }
 
-
-// One card per explained skill gap, for the child to read with the parent (issue #4).
-// Cards are matched to skill gaps by key, never by title.
-function ExplanationCards({
-  cards,
-  skillGaps,
-  stagger,
+// One skill gap. Fact skills get no card (ADR-015, ADR-021), so they say "learn by heart".
+function SkillRow({
+  gap,
+  done,
+  showCards,
+  canExplain,
+  onOpenCard,
 }: {
-  cards: ExplanationCard[];
-  skillGaps: SkillGap[];
-  // Saved cards all arrive at once, so stagger them. Live cards already arrive one by one.
-  stagger: boolean;
+  gap: SkillGap;
+  done: boolean;
+  showCards: boolean;
+  canExplain: boolean;
+  onOpenCard: (key: string) => void;
 }) {
+  const isFact = gap.kind === "fact";
+  const numbers = gap.questions.map((question) => `Q${question.number}`).join(", ");
   return (
-    <ul className="grid gap-6">
-      {cards.map((card, index) => {
-        const gap = skillGaps.find((g) => g.key === card.key);
-        return (
-          <li
-            key={card.key}
-            style={stagger ? { animationDelay: `${Math.min(index, 10) * 120}ms` } : undefined}
-            className="motion-safe:animate-rise motion-reduce:animate-fade"
-          >
-            {card.status === "explained" ? (
-              <ExplainedCard card={card} questionNumber={gap?.exampleQuestion.number} />
-            ) : (
-              <FailedCard
-                card={card}
-                skillName={gap?.name}
-                questionNumber={gap?.exampleQuestion.number}
+    <li className="grid min-h-[52px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-charcoal/16 py-2 last:border-b">
+      <div className="min-w-0">
+        <p className="text-base leading-snug font-semibold md:text-lg">{gap.name}</p>
+        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-dusk">
+          <Mark result={gap.exampleQuestion.result} />
+          <span className="tabular-nums">{numbers}</span>
+          {isFact && <span>· Learn by heart</span>}
+        </p>
+      </div>
+      {!isFact && canExplain && (
+        <button
+          type="button"
+          onClick={() => onOpenCard(gap.key)}
+          aria-label={`${done ? "Worked through. " : ""}${showCards ? "Open card" : "Show card"}: ${gap.name}`}
+          className={`group inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-sm font-semibold hover:underline hover:underline-offset-4 ${focusRing}`}
+        >
+          {done ? (
+            <>
+              <Icon name="check" className="text-olive" />
+              Done
+            </>
+          ) : (
+            <>
+              Card
+              <Icon
+                name="arrow"
+                className="transition-transform duration-200 ease-snappy group-hover:translate-x-[3px]"
               />
-            )}
-          </li>
-        );
-      })}
-    </ul>
+            </>
+          )}
+        </button>
+      )}
+    </li>
   );
 }
 
-type ExplainedCardData = Extract<ExplanationCard, { status: "explained" }>;
-type FailedCardData = Extract<ExplanationCard, { status: "failed" }>;
-
-// The child's question, their answer next to the right one.
+// What the child wrote next to the right answer.
 // A blank shows "Left blank", never "you wrote…" (user story 20).
-function ExampleQuestion({
-  card,
-  questionNumber,
-}: {
-  card: ExplanationCard;
-  questionNumber?: string;
-}) {
+function AnswerPair({ card, result }: { card: ExplanationCard; result: Result }) {
   const isBlank = card.childAnswer.trim() === "";
   return (
-    <div className="mt-4 rounded-lg bg-linen/70 px-4 py-3">
-      <p className="font-semibold">
-        {questionNumber && (
-          <span className="text-ink/50 tabular-nums">Q{questionNumber} </span>
-        )}
-        {card.question}
-      </p>
-      <p className="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-        {isBlank ? (
-          <span className="text-sm text-ink/70">Left blank</span>
-        ) : (
-          <span className="text-sm text-ink/70">
-            You wrote{" "}
-            <span className="font-hand text-xl text-terracotta tabular-nums line-through decoration-2">
-              {card.childAnswer}
-            </span>
-          </span>
-        )}
-        <span className="text-sm text-ink/70">
-          Right answer{" "}
-          <span className="font-hand text-xl text-olive tabular-nums">{card.correctAnswer}</span>
-        </span>
-      </p>
-    </div>
+    <dl className="mt-3.5 grid grid-cols-2 border-t border-charcoal/16">
+      <div className="min-w-0 pt-2.5">
+        <dt className={`flex items-center gap-1.5 whitespace-nowrap ${label}`}>
+          <Mark result={result} className="text-sm" />
+          You wrote
+        </dt>
+        <dd className="flex min-h-11 items-center">
+          {isBlank ? (
+            <span className="text-[15px] font-semibold text-dusk">Left blank</span>
+          ) : (
+            <span className="font-hand text-[34px] leading-none break-all">{card.childAnswer}</span>
+          )}
+        </dd>
+      </div>
+      <div className="min-w-0 border-l border-charcoal/16 pt-2.5 pl-4">
+        <dt className={`flex items-center gap-1.5 whitespace-nowrap ${label}`}>
+          <Icon name="check" className="text-sm text-olive" />
+          Should be
+        </dt>
+        <dd className="flex min-h-11 items-center text-[26px] leading-none font-semibold tracking-[-0.02em] break-all text-olive tabular-nums">
+          {card.correctAnswer}
+        </dd>
+      </div>
+    </dl>
   );
 }
 
+// One explanation card, built like a brick (issue #18): a fine outline, a solid
+// peach shade, and four studs on top. Closed: the mistake. Open: what went
+// wrong, then the steps one at a time, laid like a brick wall. Worked through:
+// the card presses into its shade, like the brick button.
 function ExplainedCard({
   card,
-  questionNumber,
+  gap,
+  open,
+  done,
+  hasNextCard,
+  onToggle,
+  onDone,
+  onNextCard,
 }: {
   card: ExplainedCardData;
-  questionNumber?: string;
+  gap?: SkillGap;
+  open: boolean;
+  done: boolean;
+  hasNextCard: boolean;
+  onToggle: () => void;
+  onDone: (done: boolean) => void;
+  onNextCard: () => void;
 }) {
+  const [step, setStep] = useState(0);
+  const [tipOpen, setTipOpen] = useState(false);
+  const doneRef = useRef<HTMLButtonElement>(null);
+  const total = card.steps.length;
+  const result = gap?.exampleQuestion.result ?? "incorrect";
+  const questionNumber = gap?.exampleQuestion.number;
+  const bodyId = `card-body-${card.key}`;
+  const tipId = `card-tip-${card.key}`;
+
+  // The Next button disappears when the card is done, so move focus to the done buttons.
+  const finish = () => {
+    onDone(true);
+    requestAnimationFrame(() => doneRef.current?.focus({ preventScroll: true }));
+  };
+  const again = () => {
+    setStep(0);
+    onDone(false);
+  };
+
+  const visibleSteps = done ? total : step + 1;
+
   return (
-    <article className="paper-shadow">
-      <div className="stamp-edge bg-paper p-6 sm:p-9">
-        <h4 className="font-display text-2xl leading-tight font-medium text-balance">
-          {card.title}
-        </h4>
-        <ExampleQuestion card={card} questionNumber={questionNumber} />
+    <article
+      className={`@container relative mt-[10px] mr-[7px] rounded-[3px] border border-charcoal bg-white p-6 transition-[translate,box-shadow] duration-[260ms] ease-snappy sm:p-7 ${done ? "shadow-[3px_3px_0_var(--color-olive-soft)] motion-safe:translate-x-1 motion-safe:translate-y-1" : "shadow-[7px_7px_0_var(--color-peach)]"}`}
+    >
+      <CardStuds />
+      <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${label}`}>
+        <Mark result={result} className="text-sm" />
+        <span>
+          {questionNumber ? `Q${questionNumber} · ` : ""}
+          {RESULT_LABELS[result]}
+        </span>
+        {done && (
+          <span className="inline-flex items-center gap-1 text-olive">
+            <Icon name="check" className="text-sm" />
+            Worked through
+          </span>
+        )}
+      </p>
 
-        <ol className="mt-5 space-y-3">
-          {card.steps.map((step, index) => (
-            <li key={index} className="flex gap-3">
-              <span
-                aria-hidden
-                className="grid size-7 shrink-0 place-items-center rounded-full bg-peach/50 text-sm font-bold text-rust tabular-nums"
-              >
-                {index + 1}
-              </span>
-              <p className="pt-0.5 text-lg leading-snug">{step}</p>
-            </li>
-          ))}
-        </ol>
+      <h3>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          className={`mt-1 flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-md text-left ${focusRing}`}
+        >
+          <span className={`leading-tight font-semibold tracking-[-0.01em] text-balance ${open ? "text-2xl @xl:text-[28px]" : "text-[22px]"}`}>
+            {card.title}
+          </span>
+          <Icon
+            name="chevron"
+            className={`text-base text-dusk transition-transform duration-200 ease-snappy ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+      </h3>
 
-        <p className="mt-5 rounded-lg bg-terracotta/10 px-4 py-3 leading-snug">
-          <span className="font-semibold text-terracotta">What went wrong: </span>
-          {card.whatWentWrong}
-        </p>
-
-        {/* For the parent, not the child: set apart and smaller. */}
-        <aside className="mt-6 border-t-2 border-dashed border-ink/15 pt-4 text-sm leading-relaxed text-ink/75">
-          <p className="text-xs font-semibold tracking-wide text-rust uppercase">Tip for you</p>
-          <p className="mt-1">{card.parentTip}</p>
-        </aside>
+      {/* A wide open card (576px+) puts the question beside the answers.
+        @xl is a container query: it reads the card's width, not the screen's. */}
+      <div
+        className={`mt-2.5 ${open ? "@xl:grid @xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @xl:items-end @xl:gap-x-9" : ""}`}
+      >
+        <p className="text-lg leading-snug font-semibold tabular-nums">{card.question}</p>
+        <AnswerPair card={card} result={result} />
       </div>
+
+      {open && (
+        <div
+          id={bodyId}
+          className="mt-5 border-t border-dashed border-charcoal/16 pt-4 motion-safe:animate-rise motion-reduce:animate-fade @xl:grid @xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @xl:content-start @xl:gap-x-9"
+        >
+          <div className="@xl:col-start-1">
+            <p className={`whitespace-nowrap ${label}`}>What went wrong</p>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-dusk">{card.whatWentWrong}</p>
+          </div>
+
+          <div className="mt-6 @xl:col-start-2 @xl:row-span-2 @xl:row-start-1 @xl:mt-0">
+            <p className={`${label} tabular-nums`}>
+              {done ? `All ${total} steps` : `Step ${step + 1} of ${total}`}
+            </p>
+            {/* Steps stack like a brick wall: every other course is offset. */}
+            <ol aria-live="polite" className="mt-2 grid gap-1.5">
+              {card.steps.slice(0, visibleSteps).map((text, index) => {
+                const current = index === step && !done;
+                return (
+                  <li
+                    key={index}
+                    aria-current={current ? "step" : undefined}
+                    className={`flex items-start gap-3 rounded-[5px] border py-3 pr-3 pl-2.5 transition-colors duration-200 motion-safe:animate-rise motion-reduce:animate-fade ${index % 2 === 0 ? "mr-3.5" : "ml-3.5"} ${current ? "border-honey bg-honey-soft text-charcoal" : done ? "border-charcoal/16 text-charcoal" : "border-charcoal/16 text-dusk"}`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`mt-px grid size-6 shrink-0 place-items-center rounded-[4px] border text-[13px] font-semibold text-charcoal tabular-nums ${current ? "border-honey bg-honey" : done ? "border-olive-soft bg-olive-pale" : "border-peach bg-peach-soft"}`}
+                    >
+                      {index + 1}
+                    </span>
+                    <p className={`min-w-0 leading-snug ${current ? "text-[17px] font-medium" : "text-[15px]"}`}>
+                      {text}
+                    </p>
+                  </li>
+                );
+              })}
+            </ol>
+
+            {done ? (
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-t border-charcoal/16 pt-4 motion-safe:animate-rise motion-reduce:animate-fade">
+                <div>
+                  <p className="flex items-center gap-2 text-lg leading-tight font-semibold text-olive">
+                    <Icon name="check" />
+                    Worked through
+                  </p>
+                  <p className="mt-1 text-[15px] text-dusk">The answer is {card.correctAnswer}.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                  <button
+                    ref={hasNextCard ? undefined : doneRef}
+                    type="button"
+                    onClick={again}
+                    className={quietButton}
+                  >
+                    Go again
+                  </button>
+                  {hasNextCard && (
+                    <button
+                      ref={doneRef}
+                      type="button"
+                      onClick={onNextCard}
+                      className={`mt-1.5 mb-1 min-h-11 px-5 text-[15px] ${brickButton}`}
+                    >
+                      <BrickStuds small />
+                      Next card
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 flex items-end justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => s - 1)}
+                  className={`${quietButton} ${step === 0 ? "invisible" : ""}`}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (step < total - 1 ? setStep((s) => s + 1) : finish())}
+                  className={`mt-1.5 mb-1 min-h-11 px-5 text-[15px] ${brickButton}`}
+                >
+                  <BrickStuds small />
+                  {step < total - 1 ? "Next step" : "We’ve got it"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* For the grown-up, not the child: tucked away until asked for. */}
+          <div className="mt-6 border-t border-charcoal/16 @xl:col-start-1">
+            <button
+              type="button"
+              onClick={() => setTipOpen((o) => !o)}
+              aria-expanded={tipOpen}
+              aria-controls={tipId}
+              className={`flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 text-left ${focusRing}`}
+            >
+              <span className={label}>Tip for the grown-up</span>
+              <Icon
+                name="chevron"
+                className={`text-sm text-dusk transition-transform duration-200 ease-snappy ${tipOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {tipOpen && (
+              <p
+                id={tipId}
+                className="pb-1 text-[15px] leading-relaxed text-dusk motion-safe:animate-rise motion-reduce:animate-fade"
+              >
+                {card.parentTip}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   );
 }
 
 // The AI skipped this skill gap, or its explanation failed the check.
-function FailedCard({
-  card,
-  skillName,
-  questionNumber,
-}: {
-  card: FailedCardData;
-  skillName?: string;
-  questionNumber?: string;
-}) {
+function FailedCard({ card, gap }: { card: FailedCardData; gap?: SkillGap }) {
   return (
-    <article className="rounded-2xl border-2 border-dashed border-ink/20 p-6 sm:p-9">
-      <h4 className="font-display text-xl font-medium">Couldn’t explain this one</h4>
-      {skillName && <p className="mt-1 text-sm text-ink/70">{skillName}</p>}
-      <ExampleQuestion card={card} questionNumber={questionNumber} />
+    // Same brick shape, unbuilt: dashed outline and studs, no shade.
+    <article className="relative mt-[10px] mr-[7px] rounded-[3px] border border-dashed border-charcoal/35 bg-white p-6 sm:p-7">
+      <CardStuds dashed />
+      <p className={label}>{gap?.exampleQuestion.number ? `Q${gap.exampleQuestion.number}` : "Card"}</p>
+      <h3 className="mt-1.5 text-[22px] leading-tight font-semibold">Couldn’t explain this one</h3>
+      {gap && <p className="mt-1 text-[15px] text-dusk">{gap.name}</p>}
+      <p className="mt-4 text-lg leading-snug font-semibold tabular-nums">{card.question}</p>
+      <AnswerPair card={card} result={gap?.exampleQuestion.result ?? "incorrect"} />
     </article>
   );
 }
 
-// Shown under the cards while the AI is still writing more.
-// The same hopping pixels as the marking button, in ink so they show on paper.
-// Reduced motion: the pixels sit still.
-function WritingCard({ first }: { first: boolean }) {
+// Shown in the row while the AI writes more cards.
+function WritingCard({ cardNumber, total, skillName }: { cardNumber: number; total: number; skillName?: string }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border-2 border-dashed border-ink/15 p-6 sm:p-9">
-      <span aria-hidden className="relative h-[5px] w-12 overflow-hidden">
-        <span className="absolute inset-y-0 left-0 flex gap-px motion-safe:animate-snake">
-          <span className="size-[5px] bg-ink/25" />
-          <span className="size-[5px] bg-ink/50" />
-          <span className="size-[5px] bg-honey" />
+    <div className="grid min-h-[236px] place-content-center justify-items-center gap-3.5 rounded-xl border-[1.5px] border-dashed border-charcoal/16 p-6 text-center">
+      <BuildingBricks className="w-[150px]" />
+      <p role="status">
+        <span className="shimmer-text inline-block text-[15px] font-semibold tabular-nums">
+          Writing card {cardNumber} of {total}
         </span>
-      </span>
-      <p className="text-ink/70">
-        {first ? "Fawna is writing the first card…" : "Writing the next card…"}
+        {skillName && <span className="mt-0.5 block text-sm text-dusk">{skillName}</span>}
       </p>
     </div>
+  );
+}
+
+// Every question on the sheet, hidden until asked for.
+function QuestionList({ questions }: { questions: MarkedQuestion[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section aria-labelledby="questions-heading" className="mt-12 border-t border-charcoal/16">
+      <h2 id="questions-heading">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls="question-list"
+          className={`flex min-h-14 w-full cursor-pointer items-center justify-between gap-3 text-left text-2xl font-semibold tracking-[-0.01em] ${focusRing}`}
+        >
+          All {questions.length} questions
+          <Icon
+            name="chevron"
+            className={`text-base text-dusk transition-transform duration-200 ease-snappy ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+      </h2>
+      {open && (
+        <ol
+          id="question-list"
+          className="grid gap-x-8 pb-2 motion-safe:animate-rise motion-reduce:animate-fade md:grid-cols-2"
+        >
+          {questions.map((question, index) => {
+            const isCorrect = question.result === "correct";
+            return (
+              <li
+                key={`${question.number}-${index}`}
+                className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-2 border-t border-charcoal/9 py-3"
+              >
+                <span className="pt-0.5 font-semibold text-dusk tabular-nums">Q{question.number}</span>
+                <div className="min-w-0">
+                  <p className="text-[15px] leading-snug">{question.question}</p>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-dusk">
+                    <span className="inline-flex items-center gap-1.5 font-semibold">
+                      <Mark result={question.result} />
+                      {RESULT_LABELS[question.result]}
+                    </span>
+                    {question.childAnswer && (
+                      <span>
+                        <span className="sr-only">Child’s answer: </span>
+                        <span className="font-hand text-xl leading-none text-charcoal">
+                          {question.childAnswer}
+                        </span>
+                      </span>
+                    )}
+                    {!isCorrect && question.result !== "unreadable" && (
+                      <span>
+                        Should be{" "}
+                        <span className="font-semibold text-olive tabular-nums">{question.correctAnswer}</span>
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
   );
 }
 
@@ -266,6 +581,10 @@ export default function ResultsList({
   const [liveCards, setLiveCards] = useState<ExplanationCard[]>([]);
   const [status, setStatus] = useState<ExplainStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  // Which card is open. undefined = the first card; null = all closed.
+  const [openKey, setOpenKey] = useState<string | null | undefined>(undefined);
+  // Cards the child has worked through. Browser only, nothing is saved.
+  const [doneKeys, setDoneKeys] = useState<string[]>([]);
   const cardsRef = useRef<HTMLElement>(null);
   // Lets us stop a running request, e.g. when the parent marks a new sheet.
   const requestRef = useRef<AbortController | null>(null);
@@ -274,6 +593,11 @@ export default function ResultsList({
   useEffect(() => () => requestRef.current?.abort(), []);
 
   const cards = isSample ? explanations : liveCards;
+  // The server drops fact gaps (ADR-026), so this is how many cards to expect.
+  const explainable = summary.skillGaps.filter((gap) => gap.kind !== "fact");
+  const activeKey = openKey === undefined ? (cards[0]?.key ?? null) : openKey;
+  const explainedCards = cards.filter((card) => card.status === "explained");
+  const doneCount = explainedCards.filter((card) => doneKeys.includes(card.key)).length;
 
   // The cards land below the marks, so bring them into view once they exist.
   // Reduced motion: jump, no glide.
@@ -339,143 +663,161 @@ export default function ResultsList({
     if (!isSample) explain();
   };
 
-  const helpStyle =
-    "rounded-full border-2 border-rust/30 px-3.5 py-1 text-sm font-semibold text-rust transition-colors hover:border-rust hover:bg-peach/40 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-espresso";
+  // From the skills list: show the cards if needed, then open this one.
+  const openCard = (key: string) => {
+    setOpenKey(key);
+    if (!showCards) {
+      handleHelp();
+      return;
+    }
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`card-${key}`)
+        ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest", inline: "start" }),
+    );
+  };
 
-  // Only the counts that happened, so "0 couldn't read" doesn't add noise.
-  const counts = [
-    { label: "correct", value: summary.correct, tone: "bg-olive/12 text-olive" },
-    { label: "to work on", value: summary.incorrect, tone: "bg-terracotta/12 text-terracotta" },
-    { label: "not answered", value: summary.blank, tone: "bg-ink/8 text-ink/70" },
-    { label: "couldn't read", value: summary.unreadable, tone: "bg-ink/8 text-ink/70" },
-  ].filter((count, index) => index < 2 || count.value > 0);
+  const setDone = (key: string, done: boolean) =>
+    setDoneKeys((previous) =>
+      done ? [...previous.filter((k) => k !== key), key] : previous.filter((k) => k !== key),
+    );
+
+  // The next explained card the child hasn't finished, going round from this one.
+  const nextUndone = (key: string) => {
+    const index = explainedCards.findIndex((card) => card.key === key);
+    for (let step = 1; step < explainedCards.length; step++) {
+      const next = explainedCards[(index + step) % explainedCards.length];
+      if (!doneKeys.includes(next.key)) return next;
+    }
+    return undefined;
+  };
 
   return (
-    <>
-      <div className="paper-shadow">
-        <div className="stamp-edge bg-paper p-7 sm:p-10">
-          <h2 className="font-display text-3xl font-medium">Marked</h2>
-          {/* The full sentence for screen readers; the chips below show the same counts. */}
-          <p className="sr-only">{summary.message}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <ul aria-hidden className="contents">
-              {counts.map((count) => (
-                <li
-                  key={count.label}
-                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold tabular-nums ${count.tone}`}
-                >
-                  {count.value} {count.label}
-                </li>
-              ))}
-            </ul>
-            {/* Outside the aria-hidden list, so screen readers can reach the link. */}
-            {canExplain && (
-              <button
-                type="button"
-                onClick={handleHelp}
-                aria-expanded={showCards}
-                aria-controls="explanations"
-                className={`${helpStyle} cursor-pointer`}
-              >
-                How Fawna can help <span aria-hidden>↓</span>
-              </button>
+    <div className="font-ui text-charcoal">
+      <Summary
+        summary={summary}
+        doneKeys={doneKeys}
+        showCards={showCards}
+        canExplain={canExplain}
+        onOpenCard={openCard}
+      />
+
+      {canExplain && !showCards && (
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            type="button"
+            onClick={handleHelp}
+            aria-controls="explanations"
+            aria-expanded={false}
+            className={softButton}
+          >
+            How Fawna can help
+            <Icon name="arrow" className="rotate-90 text-honey-deep" />
+          </button>
+          <p className="text-[15px] text-dusk">One card for each skill, to work through together.</p>
+        </div>
+      )}
+
+      {showCards && (
+        <section
+          ref={cardsRef}
+          id="explanations"
+          aria-labelledby="explanations-heading"
+          aria-busy={status === "loading"}
+          className="mt-10 scroll-mt-6 motion-safe:animate-fade"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1.5">
+            <h2
+              id="explanations-heading"
+              className="text-[clamp(24px,3vw,32px)] leading-tight font-semibold tracking-[-0.01em]"
+            >
+              Work through them together
+            </h2>
+            {explainedCards.length > 0 && (
+              <p className={label} aria-live="polite">
+                <b className="font-bold text-charcoal tabular-nums">{doneCount}</b> of{" "}
+                {explainedCards.length} worked through
+              </p>
             )}
           </div>
+          {summary.skillGaps.some((gap) => gap.kind === "fact") && (
+            <p className="mt-1.5 max-w-[56ch] text-[15px] text-dusk">
+              Learn-by-heart skills need practice, not explaining, so they don’t get a card.
+            </p>
+          )}
 
-          {summary.skillGaps.length > 0 && <SkillGapList skillGaps={summary.skillGaps} />}
-
-          <ol className="mt-8 divide-y divide-ink/10 border-t border-ink/10">
-            {summary.questions.map((question, index) => {
-              const isCorrect = question.result === "correct";
-              const skill = skillName(question);
+          {/* Phones: cards stack top to bottom. Tablet and up: one sideways row,
+            closed cards 340px, the open one wider. */}
+          <ol className="flex flex-col gap-7 pt-3.5 pb-6 md:-mx-8 md:snap-x md:snap-mandatory md:scroll-px-8 md:flex-row md:items-start md:gap-6 md:overflow-x-auto md:overscroll-x-contain md:px-8 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden lg:[scrollbar-color:rgb(59_48_43/0.25)_transparent] lg:[scrollbar-width:thin]">
+            {cards.map((card, index) => {
+              const gap = summary.skillGaps.find((g) => g.key === card.key);
+              const open = activeKey === card.key;
               return (
                 <li
-                  key={`${question.number}-${index}`}
-                  // Short stagger (40ms) so the sheet reads top to bottom. Capped so long sheets don't wait.
-                  style={{ animationDelay: `${Math.min(index, 10) * 40}ms` }}
-                  className="flex gap-4 py-5 motion-safe:animate-rise motion-reduce:animate-fade"
+                  key={card.key}
+                  id={`card-${card.key}`}
+                  // Saved cards all arrive at once, so stagger them. Live cards already arrive one by one.
+                  style={isSample ? { animationDelay: `${Math.min(index, 10) * 120}ms` } : undefined}
+                  className={`w-full motion-safe:animate-rise motion-reduce:animate-fade md:shrink-0 md:snap-start ${open ? "md:w-[min(92%,700px)]" : "md:w-[340px]"}`}
                 >
-                  <Mark result={question.result} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                      <p className="font-semibold">
-                        <span className="text-ink/50 tabular-nums">Q{question.number}</span>{" "}
-                        {question.question}
-                      </p>
-                      <span
-                        className={`text-sm font-semibold ${isCorrect ? "text-olive" : question.result === "incorrect" ? "text-terracotta" : "text-ink/60"}`}
-                      >
-                        {RESULT_LABELS[question.result]}
-                      </span>
-                    </div>
-
-                    <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="sr-only">Child’s answer:</span>
-                      {/* The child's own answer, in handwriting. Crossed through when wrong. */}
-                      <span
-                        className={`font-hand text-xl tabular-nums ${isCorrect ? "text-ink" : "text-terracotta line-through decoration-2"}`}
-                      >
-                        {question.childAnswer || "blank"}
-                      </span>
-                      {!isCorrect && (
-                        <span className="text-sm text-ink/70">
-                          Right answer:{" "}
-                          <span className="font-semibold text-ink tabular-nums">
-                            {question.correctAnswer}
-                          </span>
-                        </span>
-                      )}
-                    </p>
-
-                    {skill && (
-                      <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-peach/50 px-3 py-1.5 text-sm text-rust">
-                        <span className="font-semibold">Practise:</span> {skill}
-                      </p>
+                  <div
+                    className={`transition-[translate,rotate] duration-200 ease-snappy ${open ? "" : "motion-safe:hover:-translate-y-1 motion-safe:hover:-rotate-[0.4deg]"}`}
+                  >
+                    {card.status === "explained" ? (
+                      <ExplainedCard
+                        card={card}
+                        gap={gap}
+                        open={open}
+                        done={doneKeys.includes(card.key)}
+                        hasNextCard={nextUndone(card.key) !== undefined}
+                        onToggle={() => (open ? setOpenKey(null) : openCard(card.key))}
+                        onDone={(done) => setDone(card.key, done)}
+                        onNextCard={() => {
+                          const next = nextUndone(card.key);
+                          if (next) openCard(next.key);
+                        }}
+                      />
+                    ) : (
+                      <FailedCard card={card} gap={gap} />
                     )}
                   </div>
                 </li>
               );
             })}
+            {status === "loading" && (
+              <li className="w-full md:w-[340px] md:shrink-0 md:snap-start">
+                <WritingCard
+                  cardNumber={Math.min(cards.length + 1, Math.max(explainable.length, 1))}
+                  total={Math.max(explainable.length, 1)}
+                  skillName={explainable[cards.length]?.name}
+                />
+              </li>
+            )}
           </ol>
-        </div>
-      </div>
-      {showCards && (
-          <section
-            ref={cardsRef}
-            id="explanations"
-            aria-labelledby="explanations-heading"
-            aria-busy={status === "loading"}
-            className="mt-10 scroll-mt-6 motion-safe:animate-fade"
-          >
-            <p className="text-sm font-semibold tracking-wide text-rust uppercase">
-              Read these together
-            </p>
-            <h3 id="explanations-heading" className="mt-2 font-display text-3xl font-medium">
-              How Fawna can help
-            </h3>
-            <p className="mt-2 max-w-[52ch] text-ink/80">
-              One card for each skill gap. Learn-by-heart skills need practice, not explaining, so
-              they don’t get a card.
-            </p>
-            <div className="mt-6 grid gap-6">
-              {cards.length > 0 && (
-                <ExplanationCards cards={cards} skillGaps={summary.skillGaps} stagger={isSample} />
-              )}
-              {status === "loading" && <WritingCard first={cards.length === 0} />}
-              {status === "error" && (
-                <div
-                  role="alert"
-                  className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-terracotta/10 p-6"
-                >
-                  <p className="text-ink/80">{error}</p>
-                  <button type="button" onClick={explain} className={`${helpStyle} cursor-pointer`}>
-                    Try again
-                  </button>
-                </div>
-              )}
+
+          {status === "error" && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-clay/10 p-6"
+            >
+              <p className="text-charcoal">{error}</p>
+              <button type="button" onClick={explain} className={softButton}>
+                Try again
+              </button>
             </div>
-          </section>
+          )}
+
+          {explainedCards.length > 0 && doneCount === explainedCards.length && status !== "loading" && (
+            <p className="flex items-center gap-2.5 text-[22px] leading-snug font-semibold text-balance motion-safe:animate-rise motion-reduce:animate-fade">
+              <Icon name="check" className="text-olive" />
+              All worked through. Nice work, both of you.
+            </p>
+          )}
+        </section>
       )}
-    </>
+
+      <QuestionList questions={summary.questions} />
+    </div>
   );
 }

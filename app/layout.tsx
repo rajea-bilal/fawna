@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist_Mono, Nunito, Patrick_Hand } from "next/font/google";
+import { Fraunces, Geist_Mono, Inter_Tight, Nunito, Patrick_Hand } from "next/font/google";
 import "./globals.css";
 
 // Body text (400), crossword tiles (500), navigation and buttons (600),
@@ -21,6 +21,13 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
   axes: ["opsz"],
+});
+
+// The upload and results page: all text and numbers (issue #18).
+// A variable font, so no weight list.
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin"],
 });
 
 // Handwriting inside the benefits illustrations only: a child's answers,
@@ -53,7 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${nunito.variable} ${fraunces.variable} ${geistMono.variable} ${patrickHand.variable} h-full antialiased`}
+      className={`${nunito.variable} ${fraunces.variable} ${geistMono.variable} ${patrickHand.variable} ${interTight.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

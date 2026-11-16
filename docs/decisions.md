@@ -702,3 +702,44 @@ I added one line that logs `response.usage` after each call (tokens in, out and 
 **Lesson:** If the AI sees something but the reply shape has no field for it, it's lost.
 
 ---
+
+# ADR-028: A lighter, editorial upload and results page
+
+- Date: 2026-11-15
+- Status: Accepted (issue #18)
+
+**Context:** The results page looked generic: cards stacked down the page, many coloured chips, four fonts. A parent couldn't see the score, the mistakes and the weak skills at a glance. We compared two mockups (one by Claude, one by Fable) and chose a mix.
+
+**Options:** Restyle the old page · A new editorial layout · Move results to their own page
+
+**Decision:** A new editorial layout on the same `/upload` page:
+
+- A big score, the counts, and "Skills to practise" at the top.
+- Explanation cards in a row, one open at a time. Steps show one at a time and stack like a brick wall.
+- Cards are built like bricks, not stamps: a fine outline, a solid peach shade, and four studs on top. The studs are decorative and the same on every card (form, explanation, couldn't-explain), so cards without steps match. When the steps are worked through, the card presses into its shade. The perforated stamp edge said "post office"; the page's story is building.
+- One brick button (peach face, clay side, studs) for the building actions: Mark worksheet, Next step, Next card.
+- One font, Inter Tight, for all text and numbers. Patrick Hand only for what the child wrote. Fraunces only for the logo.
+- A lighter page (`canvas` #fdfbf7), white cards, soft charcoal text. No rust, no stark black.
+- Two line-drawn bricks as the one "working on it" picture, for marking and for writing cards.
+- The upload form is restyled to match. This replaces ADR-024's pixel details (step cubes, pixel grid, pixel trail) on this page. The landing page keeps them.
+
+**Score rule:** score = correct ÷ (all questions − unreadable). Unreadable answers show on their own ("Couldn't read"). Blank still counts against the score. The AI marks crossed-out and empty answers as blank, so "unreadable" means Fawna couldn't read it, not that the child got it wrong.
+
+**Why:**
+
+- Parents see the answer in a few seconds, before reading any card.
+- One step at a time suits a child better than a wall of text.
+- One font and fewer colours make the page calmer.
+- An unreadable answer is Fawna's failure, so it shouldn't lower the child's score.
+
+**Trade-offs and risks:**
+
+- The upload page no longer matches the landing page's fonts and pixel style.
+- Stepper and "worked through" state live only in the browser. They reset on reload.
+- Cards still wait for the "How Fawna can help" click, so the AI is only paid for when asked.
+
+**Validation:** Types, lint and the 46 existing tests pass. Not yet checked in a browser.
+
+**Lesson:** Compare two mockups side by side before building. The best version was a mix of both.
+
+---
